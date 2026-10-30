@@ -16,7 +16,7 @@ first for the project, status and Phase 1 plan.
 - SDKs never hold keys. They run the `parse_invalid` and `context_invalid` vectors and the parse
   part of `valid`; only the crypto service runs `decrypt_invalid`.
 - `proto/` is the `/v1` contract. Regenerate the OpenAPI with `proto/tools/generate.sh` (`--check` to
-  verify); never hand-edit `proto/openapi/openapi.yaml`. Changes to `v1` are additive only. Public
+  verify; needs Node and Docker, which builds the pinned generator once); never hand-edit `proto/openapi/openapi.yaml`. Changes to `v1` are additive only. Public
   error codes live in `proto/kallara/v1/errors.json`.
 
 ## Planned layout (Phase 1)
