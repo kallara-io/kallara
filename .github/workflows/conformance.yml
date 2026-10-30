@@ -1,0 +1,42 @@
+name: conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vectors:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Install generator dependencies
+        run: pip install "cryptography>=50.0.2,<51" "jsonschema>=4.23,<5"
+
+      - name: Vectors match the generator
+        run: python conformance/tools/gen_ciphertext_v1.py --check
+
+      - name: Vectors match the schema
+        run: |
+          python - <<'EOF'
+          import json, jsonschema
+          schema = json.load(open("conformance/schema/ciphertext-v1.schema.json"))
+          vectors = json.load(open("conformance/vectors/ciphertext-v1.json"))
+          jsonschema.Draft202012Validator.check_schema(schema)
+          jsonschema.Draft202012Validator(schema).validate(vectors)
+          print("schema ok")
+          EOF

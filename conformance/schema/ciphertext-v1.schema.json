@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kallara-io/kallara/conformance/schema/ciphertext-v1.schema.json",
+  "title": "Kallara ciphertext v1 conformance vectors",
+  "type": "object",
+  "required": ["spec", "format", "keys", "valid", "parse_invalid", "decrypt_invalid", "context_invalid"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "spec": {"type": "string"},
+    "format": {"const": "kal:v1"},
+    "generator": {"type": "string"},
+    "warning": {"type": "string"},
+    "keys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["key_id", "version", "algorithm", "material_hex"],
+        "properties": {
+          "key_id": {"type": "string", "pattern": "^k_[0-9A-HJKMNP-TV-Z]{26}$"},
+          "version": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+          "algorithm": {"const": "AES-256-GCM"},
+          "material_hex": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "valid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "key", "context_pairs", "nonce_hex", "aad_hex", "ciphertext"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "description": {"type": "string"},
+          "key": {"type": "string"},
+          "context_pairs": {"$ref": "#/$defs/pairs"},
+          "plaintext_hex": {"type": "string", "pattern": "^([0-9a-f]{2})*$"},
+          "plaintext_fill": {
+            "type": "object",
+            "required": ["byte_hex", "length"],
+            "properties": {
+              "byte_hex": {"type": "string", "pattern": "^[0-9a-f]{2}$"},
+              "length": {"type": "integer", "minimum": 0, "maximum": 65536}
+            },
+            "additionalProperties": false
+          },
+          "nonce_hex": {"type": "string", "pattern": "^[0-9a-f]{24}$"},
+          "aad_hex": {"type": "string", "pattern": "^([0-9a-f]{2})+$"},
+          "ciphertext": {"type": "string", "pattern": "^kal:v1:"}
+        },
+        "oneOf": [{"required": ["plaintext_hex"]}, {"required": ["plaintext_fill"]}],
+        "additionalProperties": false
+      }
+    },
+    "parse_invalid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "ciphertext", "error"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "ciphertext": {"type": "string"},
+          "error": {"oneOf": [{"$ref": "#/$defs/parse_error"}, {"type": "null"}]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "decrypt_invalid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "key", "ciphertext", "context_pairs", "error"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "key": {"type": "string"},
+          "ciphertext": {"type": "string"},
+          "context_pairs": {"$ref": "#/$defs/pairs"},
+          "error": {"const": "decrypt_failed"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "context_invalid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "context_pairs", "error", "tags"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "context_pairs": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2}},
+          "error": {"const": "context_invalid"},
+          "tags": {"type": "array", "items": {"enum": ["duplicate_keys", "non_string_value", "invalid_utf8"]}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "pairs": {
+      "type": "array",
+      "items": {"type": "array", "prefixItems": [{"type": "string"}, {"type": "string"}], "minItems": 2, "maxItems": 2}
+    },
+    "parse_error": {
+      "enum": [
+        "format_invalid",
+        "format_unsupported_version",
+        "key_id_invalid",
+        "key_version_invalid",
+        "payload_encoding_invalid",
+        "payload_too_short",
+        "payload_too_long"
+      ]
+    }
+  }
+}
