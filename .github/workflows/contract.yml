@@ -32,7 +32,8 @@ jobs:
         run: npx --yes "$BUF" lint
       - name: No breaking changes against main
         run: |
-          if git ls-tree --name-only origin/main proto/buf.yaml | grep -q .; then
+          # cat-file paths are from the repo root; ls-tree's were relative to proto/ and never matched.
+          if git cat-file -e origin/main:proto/buf.yaml 2>/dev/null; then
             npx --yes "$BUF" breaking --against '../.git#ref=origin/main,subdir=proto'
           else
             echo "main has no proto/ yet; nothing to compare"
