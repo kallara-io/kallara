@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -94,3 +95,31 @@ def test_batch_result_can_carry_problem(spec: dict[str, Any]) -> None:
 def test_no_tenant_in_requests(spec: dict[str, Any]) -> None:
     params = {p["name"] for _, op in _operations(spec) for p in op.get("parameters", [])}
     assert not TENANT & (params | set(_properties(spec)))
+
+
+def _registry_codes() -> list[str]:
+    registry = json.loads((REPO / "proto" / "kallara" / "v1" / "errors.json").read_text(encoding="utf-8"))
+    return [e["code"] for e in registry["codes"]]
+
+
+def test_every_operation_has_problem_default(spec: dict[str, Any]) -> None:
+    for _, op in _operations(spec):
+        content = op["responses"]["default"]["content"]
+        assert list(content) == ["application/problem+json"], op["operationId"]
+        assert content["application/problem+json"]["schema"] == {"$ref": "#/components/schemas/Problem"}
+
+
+def test_problem_code_enum_matches_registry(spec: dict[str, Any]) -> None:
+    assert spec["components"]["schemas"]["Problem"]["properties"]["code"]["enum"] == _registry_codes()
+
+
+def test_problem_type_documents_urn(spec: dict[str, Any]) -> None:
+    assert "urn:kallara:error:" in spec["components"]["schemas"]["Problem"]["properties"]["type"]["description"]
+
+
+def test_bearer_auth(spec: dict[str, Any]) -> None:
+    assert spec["components"]["securitySchemes"]["bearer"] == {"type": "http", "scheme": "bearer"}
+    assert spec["security"] == [{"bearer": []}]
+    ops = {op["operationId"]: op for _, op in _operations(spec)}
+    assert ops["CryptoService_GetJwks"]["security"] == []
+    assert all("security" not in op for name, op in ops.items() if name != "CryptoService_GetJwks")
