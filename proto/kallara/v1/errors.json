@@ -1,0 +1,23 @@
+{
+  "codes": [
+    {"code": "format_invalid", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext is not a well-formed kal: string."},
+    {"code": "format_unsupported_version", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext uses a format version this service does not support."},
+    {"code": "key_id_invalid", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The key ID in the ciphertext is not valid."},
+    {"code": "key_version_invalid", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The key version in the ciphertext is not valid."},
+    {"code": "payload_encoding_invalid", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext payload is not canonical unpadded base64url."},
+    {"code": "payload_too_short", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext payload is too short."},
+    {"code": "payload_too_long", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext payload is too long."},
+    {"code": "context_invalid", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The encryption context breaks a context rule."},
+    {"code": "decrypt_failed", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The ciphertext could not be decrypted with this context."},
+    {"code": "plaintext_too_long", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The plaintext is larger than 64 KiB."},
+    {"code": "context_mismatch", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "This key requires an encryption context and none was sent."},
+    {"code": "invalid_request", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "A field in the request is missing or malformed."},
+    {"code": "unauthenticated", "http": 401, "grpc": "UNAUTHENTICATED", "title": "The request has no valid access token."},
+    {"code": "permission_denied", "http": 403, "grpc": "PERMISSION_DENIED", "title": "The caller may not perform this operation on this resource."},
+    {"code": "not_found", "http": 404, "grpc": "NOT_FOUND", "title": "The resource does not exist."},
+    {"code": "secret_scheduled_for_deletion", "http": 409, "grpc": "FAILED_PRECONDITION", "title": "The secret is scheduled for deletion; restore it first."},
+    {"code": "rate_limited", "http": 429, "grpc": "RESOURCE_EXHAUSTED", "title": "Too many requests; retry later."},
+    {"code": "unavailable", "http": 503, "grpc": "UNAVAILABLE", "title": "The service is temporarily unavailable; retry later."},
+    {"code": "internal", "http": 500, "grpc": "INTERNAL", "title": "An internal error occurred."}
+  ]
+}

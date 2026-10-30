@@ -1,0 +1,18 @@
+# OpenAPI 3 for the /v1 contract. Run tools/generate.sh, not buf generate directly:
+# it also adds problem+json errors and auth.
+version: v2
+# The generator needs a Go package path; managed mode supplies one without fixing it in the protos.
+managed:
+  enabled: true
+  disable:
+    - module: buf.build/googleapis/googleapis
+  override:
+    - file_option: go_package_prefix
+      value: github.com/kallara-io/kallara/gen/go
+plugins:
+  - remote: buf.build/community/google-gnostic-openapi:v0.7.0
+    out: openapi
+    opt:
+      - default_response=false
+      - title=Kallara API
+      - version=v1
