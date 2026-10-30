@@ -36,6 +36,7 @@ OPS = {
 # Only resource names, versions and paging may appear in a URL; never values, plaintext or context.
 ALLOWED_PARAMS = {
     "key",
+    "keyId",
     "version",
     "project",
     "environment",
@@ -109,8 +110,11 @@ def test_every_operation_has_problem_default(spec: dict[str, Any]) -> None:
         assert content["application/problem+json"]["schema"] == {"$ref": "#/components/schemas/Problem"}
 
 
-def test_problem_code_enum_matches_registry(spec: dict[str, Any]) -> None:
-    assert spec["components"]["schemas"]["Problem"]["properties"]["code"]["enum"] == _registry_codes()
+def test_problem_codes_listed_but_open(spec: dict[str, Any]) -> None:
+    # A closed enum would make strict clients reject codes added after they were generated.
+    code = spec["components"]["schemas"]["Problem"]["properties"]["code"]
+    assert "enum" not in code
+    assert code["x-kallara-codes"] == _registry_codes()
 
 
 def test_problem_type_documents_urn(spec: dict[str, Any]) -> None:
@@ -123,3 +127,33 @@ def test_bearer_auth(spec: dict[str, Any]) -> None:
     ops = {op["operationId"]: op for _, op in _operations(spec)}
     assert ops["CryptoService_GetJwks"]["security"] == []
     assert all("security" not in op for name, op in ops.items() if name != "CryptoService_GetJwks")
+
+
+def test_jwks_addressed_by_public_key_id(spec: dict[str, Any]) -> None:
+    # No token means no organization, so the path must name the key globally and unguessably.
+    [(path, op)] = [(p, op) for p, item in spec["paths"].items() for op in item.values()
+                    if op.get("operationId") == "CryptoService_GetJwks"]
+    assert [p["name"] for p in op["parameters"]] == ["keyId"]
+    assert "project" not in path
+
+
+def test_bytes_fields_are_base64(spec: dict[str, Any]) -> None:
+    props = [p for s in spec["components"]["schemas"].values() for p in s.get("properties", {}).values()]
+    assert not [p for p in props if p.get("format") == "bytes"]
+    byte_props = [p for p in props if p.get("format") == "byte"]
+    assert len(byte_props) == 10
+    assert all("base64" in p.get("description", "").lower() for p in byte_props)
+
+
+def test_jwk_has_only_public_members(spec: dict[str, Any]) -> None:
+    public = {"kty", "crv", "x", "y", "n", "e", "kid", "alg", "use"}
+    assert set(spec["components"]["schemas"]["Jwk"]["properties"]) <= public
+
+
+def test_batch_states_total_cap(spec: dict[str, Any]) -> None:
+    assert "4 MiB" in spec["components"]["schemas"]["BatchRequest"]["description"]
+
+
+def test_problem_documents_grpc_convention(spec: dict[str, Any]) -> None:
+    description = spec["components"]["schemas"]["Problem"]["description"]
+    assert "google.rpc.ErrorInfo" in description and 'domain "kallara"' in description

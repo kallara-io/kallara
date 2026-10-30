@@ -79,29 +79,20 @@ paths:
           content:
             application/problem+json:
               schema: *id001
-  /v1/projects/{project}/environments/{environment}/keys/{key}/jwks.json:
+  /v1/jwks/{keyId}:
     get:
       tags:
       - CryptoService
-      description: The JSON Web Key Set of a JWT key, for anyone verifying its tokens.
-        Needs no access token.
+      description: "The JSON Web Key Set of a JWT key, for anyone verifying its tokens.\
+        \ Needs no access token, so\n the key is named by its public key_id (the part\
+        \ of a JWT kid before the colon), never by its\n resource name. An unknown\
+        \ key_id and a key that is not a JWT key both get not_found."
       operationId: CryptoService_GetJwks
       parameters:
-      - name: project
+      - name: keyId
         in: path
-        description: The project id.
-        required: true
-        schema:
-          type: string
-      - name: environment
-        in: path
-        description: The environment id.
-        required: true
-        schema:
-          type: string
-      - name: key
-        in: path
-        description: The key id.
+        description: 'The key''s public ID: 26 characters of Crockford base32, as
+          in kal:v1 ciphertexts.'
         required: true
         schema:
           type: string
@@ -258,8 +249,9 @@ paths:
     post:
       tags:
       - CryptoService
-      description: Issue a signed JWT with the given claims. The header carries the
-        key version as kid.
+      description: "Issue a signed JWT with the given claims. The header's kid is\
+        \ \"<key_id>:<version>\", where\n key_id is the key's public ID, as in kal:v1\
+        \ ciphertexts."
       operationId: CryptoService_IssueJwt
       parameters:
       - name: project
@@ -714,6 +706,7 @@ components:
           items:
             $ref: '#/components/schemas/BatchItem'
           description: At most 100.
+      description: At most 100 items and 4 MiB in total; a larger request gets invalid_request.
     BatchResponse:
       type: object
       properties:
@@ -760,7 +753,8 @@ components:
       properties:
         plaintext:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
     DeleteSecretResponse:
       type: object
       properties:
@@ -776,8 +770,8 @@ components:
           description: projects/{project}/environments/{environment}/keys/{key}
         plaintext:
           type: string
-          description: At most 64 KiB.
-          format: bytes
+          description: At most 64 KiB. Base64-encoded.
+          format: byte
         context:
           type: object
           additionalProperties:
@@ -832,14 +826,15 @@ components:
           description: projects/{project}/environments/{environment}/keys/{key}
         message:
           type: string
-          description: At most 64 KiB.
-          format: bytes
+          description: At most 64 KiB. Base64-encoded.
+          format: byte
     HmacResponse:
       type: object
       properties:
         mac:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
         keyVersion:
           type: integer
           format: uint32
@@ -878,6 +873,7 @@ components:
           type: string
         kid:
           type: string
+          description: '"<key_id>:<version>".'
         alg:
           type: string
         use:
@@ -922,7 +918,7 @@ components:
         code:
           type: string
           description: Stable error code from the registry in errors.json.
-          enum:
+          x-kallara-codes:
           - format_invalid
           - format_unsupported_version
           - key_id_invalid
@@ -943,7 +939,9 @@ components:
           - unavailable
           - internal
       description: "An error, shaped like RFC 9457 problem details. REST responses\
-        \ send it as\n application/problem+json; batch results carry it per item."
+        \ send it as\n application/problem+json; batch results carry it per item.\
+        \ gRPC responses carry the same code\n as google.rpc.ErrorInfo with reason\
+        \ \"<code>\" and domain \"kallara\", with the status from\n errors.json."
     PutSecretRequest:
       type: object
       properties:
@@ -1029,14 +1027,15 @@ components:
           description: projects/{project}/environments/{environment}/keys/{key}
         message:
           type: string
-          description: At most 64 KiB.
-          format: bytes
+          description: At most 64 KiB. Base64-encoded.
+          format: byte
     SignResponse:
       type: object
       properties:
         signature:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
         keyVersion:
           type: integer
           format: uint32
@@ -1052,10 +1051,12 @@ components:
           format: uint32
         message:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
         mac:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
     VerifyHmacResponse:
       type: object
       properties:
@@ -1073,10 +1074,12 @@ components:
           format: uint32
         message:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
         signature:
           type: string
-          format: bytes
+          format: byte
+          description: Base64-encoded.
     VerifyResponse:
       type: object
       properties:

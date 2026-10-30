@@ -3,7 +3,9 @@ syntax = "proto3";
 package kallara.v1;
 
 // An error, shaped like RFC 9457 problem details. REST responses send it as
-// application/problem+json; batch results carry it per item.
+// application/problem+json; batch results carry it per item. gRPC responses carry the same code
+// as google.rpc.ErrorInfo with reason "<code>" and domain "kallara", with the status from
+// errors.json.
 message Problem {
   // urn:kallara:error:<code>.
   string type = 1;

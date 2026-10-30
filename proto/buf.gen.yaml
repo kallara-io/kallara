@@ -10,7 +10,8 @@ managed:
     - file_option: go_package_prefix
       value: github.com/kallara-io/kallara/gen/go
 plugins:
-  - remote: buf.build/community/google-gnostic-openapi:v0.7.0
+  # Built and put on PATH by tools/generate.sh at a pinned version; runs locally, not on buf.build.
+  - local: protoc-gen-openapi
     out: openapi
     opt:
       - default_response=false

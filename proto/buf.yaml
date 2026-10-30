@@ -8,3 +8,15 @@ lint:
   use: [STANDARD]
 breaking:
   use: [FILE]
+  # Language package options change generated code, not the wire or JSON contract.
+  except:
+    - FILE_SAME_GO_PACKAGE
+    - FILE_SAME_JAVA_PACKAGE
+    - FILE_SAME_JAVA_MULTIPLE_FILES
+    - FILE_SAME_JAVA_OUTER_CLASSNAME
+    - FILE_SAME_CSHARP_NAMESPACE
+    - FILE_SAME_PHP_NAMESPACE
+    - FILE_SAME_PHP_METADATA_NAMESPACE
+    - FILE_SAME_RUBY_PACKAGE
+    - FILE_SAME_SWIFT_PREFIX
+    - FILE_SAME_OBJC_CLASS_PREFIX
