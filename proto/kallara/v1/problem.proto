@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package kallara.v1;
+
+// An error, shaped like RFC 9457 problem details. REST responses send it as
+// application/problem+json; batch results carry it per item.
+message Problem {
+  // urn:kallara:error:<code>.
+  string type = 1;
+  // Short human summary of the code. May change; the code may not.
+  string title = 2;
+  // HTTP status code.
+  uint32 status = 3;
+  // Human explanation for this occurrence. Never echoes request values.
+  string detail = 4;
+  // Stable error code from the registry in errors.json.
+  string code = 5;
+}

@@ -1,0 +1,981 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: ""
+    version: 0.0.1
+paths:
+    /v1/crypto:batch:
+        post:
+            tags:
+                - CryptoService
+            description: Run up to 100 operations. Each item succeeds or fails on its own; results keep request order.
+            operationId: CryptoService_Batch
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/BatchRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BatchResponse'
+    /v1/crypto:decrypt:
+        post:
+            tags:
+                - CryptoService
+            description: Decrypt a kal:v1 ciphertext. The key is named by the ciphertext itself.
+            operationId: CryptoService_Decrypt
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DecryptRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DecryptResponse'
+    /v1/crypto:rewrap:
+        post:
+            tags:
+                - CryptoService
+            description: Re-encrypt a ciphertext under its key's current version without returning the plaintext.
+            operationId: CryptoService_Rewrap
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RewrapRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RewrapResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}/jwks.json:
+        get:
+            tags:
+                - CryptoService
+            description: The JSON Web Key Set of a JWT key, for anyone verifying its tokens. Needs no access token.
+            operationId: CryptoService_GetJwks
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetJwksResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}/versions/{version}/publicKey:
+        get:
+            tags:
+                - CryptoService
+            description: The public key of a sign or JWT key version.
+            operationId: CryptoService_GetPublicKey
+            parameters:
+                - name: version
+                  in: path
+                  required: true
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: path
+                  description: The version id.
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetPublicKeyResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:encrypt:
+        post:
+            tags:
+                - CryptoService
+            description: Encrypt plaintext into a kal:v1 ciphertext with the key's current version.
+            operationId: CryptoService_Encrypt
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/EncryptRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/EncryptResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:hmac:
+        post:
+            tags:
+                - CryptoService
+            description: Compute an HMAC with the key's current version.
+            operationId: CryptoService_Hmac
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HmacRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HmacResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:issueJwt:
+        post:
+            tags:
+                - CryptoService
+            description: Issue a signed JWT with the given claims. The header carries the key version as kid.
+            operationId: CryptoService_IssueJwt
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/IssueJwtRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/IssueJwtResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:sign:
+        post:
+            tags:
+                - CryptoService
+            description: Sign a message with the key's current version.
+            operationId: CryptoService_Sign
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SignRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:verify:
+        post:
+            tags:
+                - CryptoService
+            description: Verify a signature made by a given key version.
+            operationId: CryptoService_Verify
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/VerifyRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VerifyResponse'
+    /v1/projects/{project}/environments/{environment}/keys/{key}:verifyHmac:
+        post:
+            tags:
+                - CryptoService
+            description: Check an HMAC in constant time.
+            operationId: CryptoService_VerifyHmac
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: key
+                  in: path
+                  description: The key id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/VerifyHmacRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/VerifyHmacResponse'
+    /v1/projects/{project}/environments/{environment}/secrets:
+        get:
+            tags:
+                - SecretService
+            description: Secret names and metadata in an environment. Never returns values.
+            operationId: SecretService_ListSecrets
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageToken
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSecretsResponse'
+    /v1/projects/{project}/environments/{environment}/secrets/{secret}:
+        get:
+            tags:
+                - SecretService
+            description: 'Read a secret''s value: the latest version, or the one asked for.'
+            operationId: SecretService_GetSecret
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: secret
+                  in: path
+                  description: The secret id.
+                  required: true
+                  schema:
+                    type: string
+                - name: version
+                  in: query
+                  description: 0 means the latest version.
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GetSecretResponse'
+        delete:
+            tags:
+                - SecretService
+            description: Schedule a secret and all its versions for deletion after a recovery window.
+            operationId: SecretService_DeleteSecret
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: secret
+                  in: path
+                  description: The secret id.
+                  required: true
+                  schema:
+                    type: string
+                - name: recoveryDays
+                  in: query
+                  description: Days before deletion, 7 to 30. 0 means 7.
+                  schema:
+                    type: integer
+                    format: uint32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteSecretResponse'
+    /v1/projects/{project}/environments/{environment}/secrets/{secret}/versions:
+        get:
+            tags:
+                - SecretService
+            description: A secret's versions and metadata. Never returns values.
+            operationId: SecretService_ListSecretVersions
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: secret
+                  in: path
+                  description: The secret id.
+                  required: true
+                  schema:
+                    type: string
+                - name: pageSize
+                  in: query
+                  schema:
+                    type: integer
+                    format: uint32
+                - name: pageToken
+                  in: query
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ListSecretVersionsResponse'
+        post:
+            tags:
+                - SecretService
+            description: Store a new value as the secret's next version, creating the secret if needed.
+            operationId: SecretService_PutSecret
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: secret
+                  in: path
+                  description: The secret id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PutSecretRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PutSecretResponse'
+    /v1/projects/{project}/environments/{environment}/secrets/{secret}:restore:
+        post:
+            tags:
+                - SecretService
+            description: Cancel a scheduled deletion during the recovery window.
+            operationId: SecretService_RestoreSecret
+            parameters:
+                - name: project
+                  in: path
+                  description: The project id.
+                  required: true
+                  schema:
+                    type: string
+                - name: environment
+                  in: path
+                  description: The environment id.
+                  required: true
+                  schema:
+                    type: string
+                - name: secret
+                  in: path
+                  description: The secret id.
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RestoreSecretRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RestoreSecretResponse'
+components:
+    schemas:
+        BatchItem:
+            type: object
+            properties:
+                encrypt:
+                    $ref: '#/components/schemas/EncryptRequest'
+                decrypt:
+                    $ref: '#/components/schemas/DecryptRequest'
+                rewrap:
+                    $ref: '#/components/schemas/RewrapRequest'
+                sign:
+                    $ref: '#/components/schemas/SignRequest'
+                verify:
+                    $ref: '#/components/schemas/VerifyRequest'
+                hmac:
+                    $ref: '#/components/schemas/HmacRequest'
+                verifyHmac:
+                    $ref: '#/components/schemas/VerifyHmacRequest'
+                issueJwt:
+                    $ref: '#/components/schemas/IssueJwtRequest'
+        BatchRequest:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BatchItem'
+                    description: At most 100.
+        BatchResponse:
+            type: object
+            properties:
+                results:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BatchResult'
+                    description: One per item, in request order.
+        BatchResult:
+            type: object
+            properties:
+                encrypt:
+                    $ref: '#/components/schemas/EncryptResponse'
+                decrypt:
+                    $ref: '#/components/schemas/DecryptResponse'
+                rewrap:
+                    $ref: '#/components/schemas/RewrapResponse'
+                sign:
+                    $ref: '#/components/schemas/SignResponse'
+                verify:
+                    $ref: '#/components/schemas/VerifyResponse'
+                hmac:
+                    $ref: '#/components/schemas/HmacResponse'
+                verifyHmac:
+                    $ref: '#/components/schemas/VerifyHmacResponse'
+                issueJwt:
+                    $ref: '#/components/schemas/IssueJwtResponse'
+                error:
+                    allOf:
+                        - $ref: '#/components/schemas/Problem'
+                    description: Set when this item failed.
+        DecryptRequest:
+            type: object
+            properties:
+                ciphertext:
+                    type: string
+                context:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: The context used to encrypt.
+        DecryptResponse:
+            type: object
+            properties:
+                plaintext:
+                    type: string
+                    format: bytes
+        DeleteSecretResponse:
+            type: object
+            properties:
+                deleteTime:
+                    type: string
+                    description: When the secret will be deleted.
+                    format: date-time
+        EncryptRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                plaintext:
+                    type: string
+                    description: At most 64 KiB.
+                    format: bytes
+                context:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: |-
+                        Encryption context: up to 16 pairs; keys 1-64 bytes of [A-Za-z0-9_.-]; values up to 256 bytes
+                         of UTF-8. Decrypt needs the identical context.
+        EncryptResponse:
+            type: object
+            properties:
+                ciphertext:
+                    type: string
+                    description: kal:v1:<key_id>:<version>:<payload>
+                keyVersion:
+                    type: integer
+                    format: uint32
+        GetJwksResponse:
+            type: object
+            properties:
+                keys:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/Jwk'
+        GetPublicKeyResponse:
+            type: object
+            properties:
+                pem:
+                    type: string
+                    description: PEM-encoded SubjectPublicKeyInfo.
+                keyVersion:
+                    type: integer
+                    format: uint32
+                algorithm:
+                    type: string
+                    description: For example Ed25519 or ES256.
+        GetSecretResponse:
+            type: object
+            properties:
+                value:
+                    type: string
+                    description: UTF-8 text, at most 64 KiB.
+                version:
+                    type: integer
+                    format: uint32
+                createTime:
+                    type: string
+                    format: date-time
+        HmacRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                message:
+                    type: string
+                    description: At most 64 KiB.
+                    format: bytes
+        HmacResponse:
+            type: object
+            properties:
+                mac:
+                    type: string
+                    format: bytes
+                keyVersion:
+                    type: integer
+                    format: uint32
+        IssueJwtRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                claims:
+                    type: object
+                    description: JWT claims as a JSON object.
+        IssueJwtResponse:
+            type: object
+            properties:
+                jwt:
+                    type: string
+                    description: Compact serialization.
+                keyVersion:
+                    type: integer
+                    format: uint32
+        Jwk:
+            type: object
+            properties:
+                kty:
+                    type: string
+                crv:
+                    type: string
+                x:
+                    type: string
+                y:
+                    type: string
+                n:
+                    type: string
+                e:
+                    type: string
+                kid:
+                    type: string
+                alg:
+                    type: string
+                use:
+                    type: string
+            description: A public JSON Web Key (RFC 7517). Fields not used by the key type are empty.
+        ListSecretVersionsResponse:
+            type: object
+            properties:
+                versions:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SecretVersion'
+                nextPageToken:
+                    type: string
+        ListSecretsResponse:
+            type: object
+            properties:
+                secrets:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SecretMetadata'
+                nextPageToken:
+                    type: string
+        Problem:
+            type: object
+            properties:
+                type:
+                    type: string
+                    description: urn:kallara:error:<code>.
+                title:
+                    type: string
+                    description: Short human summary of the code. May change; the code may not.
+                status:
+                    type: integer
+                    description: HTTP status code.
+                    format: uint32
+                detail:
+                    type: string
+                    description: Human explanation for this occurrence. Never echoes request values.
+                code:
+                    type: string
+                    description: Stable error code from the registry in errors.json.
+            description: |-
+                An error, shaped like RFC 9457 problem details. REST responses send it as
+                 application/problem+json; batch results carry it per item.
+        PutSecretRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: projects/{project}/environments/{environment}/secrets/{secret}
+                value:
+                    type: string
+                    description: UTF-8 text, at most 64 KiB.
+        PutSecretResponse:
+            type: object
+            properties:
+                version:
+                    type: integer
+                    format: uint32
+                createTime:
+                    type: string
+                    format: date-time
+        RestoreSecretRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: projects/{project}/environments/{environment}/secrets/{secret}
+        RestoreSecretResponse:
+            type: object
+            properties:
+                secret:
+                    $ref: '#/components/schemas/SecretMetadata'
+        RewrapRequest:
+            type: object
+            properties:
+                ciphertext:
+                    type: string
+                context:
+                    type: object
+                    additionalProperties:
+                        type: string
+                    description: The context used to encrypt; it stays the same.
+        RewrapResponse:
+            type: object
+            properties:
+                ciphertext:
+                    type: string
+                keyVersion:
+                    type: integer
+                    format: uint32
+        SecretMetadata:
+            type: object
+            properties:
+                name:
+                    type: string
+                    description: projects/{project}/environments/{environment}/secrets/{secret}
+                latestVersion:
+                    type: integer
+                    format: uint32
+                createTime:
+                    type: string
+                    format: date-time
+                updateTime:
+                    type: string
+                    format: date-time
+                deleteTime:
+                    type: string
+                    description: 'Set while the secret is scheduled for deletion: when it will be deleted.'
+                    format: date-time
+            description: Everything about a secret except its value.
+        SecretVersion:
+            type: object
+            properties:
+                version:
+                    type: integer
+                    format: uint32
+                createTime:
+                    type: string
+                    format: date-time
+        SignRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                message:
+                    type: string
+                    description: At most 64 KiB.
+                    format: bytes
+        SignResponse:
+            type: object
+            properties:
+                signature:
+                    type: string
+                    format: bytes
+                keyVersion:
+                    type: integer
+                    format: uint32
+        VerifyHmacRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                keyVersion:
+                    type: integer
+                    description: The version that computed the MAC.
+                    format: uint32
+                message:
+                    type: string
+                    format: bytes
+                mac:
+                    type: string
+                    format: bytes
+        VerifyHmacResponse:
+            type: object
+            properties:
+                valid:
+                    type: boolean
+        VerifyRequest:
+            type: object
+            properties:
+                key:
+                    type: string
+                    description: projects/{project}/environments/{environment}/keys/{key}
+                keyVersion:
+                    type: integer
+                    description: The version that made the signature.
+                    format: uint32
+                message:
+                    type: string
+                    format: bytes
+                signature:
+                    type: string
+                    format: bytes
+        VerifyResponse:
+            type: object
+            properties:
+                valid:
+                    type: boolean
+tags:
+    - name: CryptoService
+      description: |-
+        Operations that use a named key without ever returning it. Algorithms come
+         from the key version, never from the request. The caller's organization comes
+         from its access token.
+    - name: SecretService
+      description: |-
+        Named configuration secrets: database credentials, SMTP passwords, API keys.
+         Values only ever travel in request and response bodies, never in URLs.

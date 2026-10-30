@@ -1,0 +1,268 @@
+syntax = "proto3";
+
+package kallara.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "kallara/v1/problem.proto";
+
+// Operations that use a named key without ever returning it. Algorithms come
+// from the key version, never from the request. The caller's organization comes
+// from its access token.
+service CryptoService {
+  // Encrypt plaintext into a kal:v1 ciphertext with the key's current version.
+  rpc Encrypt(EncryptRequest) returns (EncryptResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:encrypt"
+      body: "*"
+    };
+  }
+
+  // Decrypt a kal:v1 ciphertext. The key is named by the ciphertext itself.
+  rpc Decrypt(DecryptRequest) returns (DecryptResponse) {
+    option (google.api.http) = {
+      post: "/v1/crypto:decrypt"
+      body: "*"
+    };
+  }
+
+  // Re-encrypt a ciphertext under its key's current version without returning the plaintext.
+  rpc Rewrap(RewrapRequest) returns (RewrapResponse) {
+    option (google.api.http) = {
+      post: "/v1/crypto:rewrap"
+      body: "*"
+    };
+  }
+
+  // Sign a message with the key's current version.
+  rpc Sign(SignRequest) returns (SignResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:sign"
+      body: "*"
+    };
+  }
+
+  // Verify a signature made by a given key version.
+  rpc Verify(VerifyRequest) returns (VerifyResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:verify"
+      body: "*"
+    };
+  }
+
+  // Compute an HMAC with the key's current version.
+  rpc Hmac(HmacRequest) returns (HmacResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:hmac"
+      body: "*"
+    };
+  }
+
+  // Check an HMAC in constant time.
+  rpc VerifyHmac(VerifyHmacRequest) returns (VerifyHmacResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:verifyHmac"
+      body: "*"
+    };
+  }
+
+  // Issue a signed JWT with the given claims. The header carries the key version as kid.
+  rpc IssueJwt(IssueJwtRequest) returns (IssueJwtResponse) {
+    option (google.api.http) = {
+      post: "/v1/{key=projects/*/environments/*/keys/*}:issueJwt"
+      body: "*"
+    };
+  }
+
+  // The public key of a sign or JWT key version.
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse) {
+    option (google.api.http) = {get: "/v1/{key=projects/*/environments/*/keys/*}/versions/{version}/publicKey"};
+  }
+
+  // The JSON Web Key Set of a JWT key, for anyone verifying its tokens. Needs no access token.
+  rpc GetJwks(GetJwksRequest) returns (GetJwksResponse) {
+    option (google.api.http) = {get: "/v1/{key=projects/*/environments/*/keys/*}/jwks.json"};
+  }
+
+  // Run up to 100 operations. Each item succeeds or fails on its own; results keep request order.
+  rpc Batch(BatchRequest) returns (BatchResponse) {
+    option (google.api.http) = {
+      post: "/v1/crypto:batch"
+      body: "*"
+    };
+  }
+}
+
+message EncryptRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // At most 64 KiB.
+  bytes plaintext = 2;
+  // Encryption context: up to 16 pairs; keys 1-64 bytes of [A-Za-z0-9_.-]; values up to 256 bytes
+  // of UTF-8. Decrypt needs the identical context.
+  map<string, string> context = 3;
+}
+
+message EncryptResponse {
+  // kal:v1:<key_id>:<version>:<payload>
+  string ciphertext = 1;
+  uint32 key_version = 2;
+}
+
+message DecryptRequest {
+  string ciphertext = 1;
+  // The context used to encrypt.
+  map<string, string> context = 2;
+}
+
+message DecryptResponse {
+  bytes plaintext = 1;
+}
+
+message RewrapRequest {
+  string ciphertext = 1;
+  // The context used to encrypt; it stays the same.
+  map<string, string> context = 2;
+}
+
+message RewrapResponse {
+  string ciphertext = 1;
+  uint32 key_version = 2;
+}
+
+message SignRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // At most 64 KiB.
+  bytes message = 2;
+}
+
+message SignResponse {
+  bytes signature = 1;
+  uint32 key_version = 2;
+}
+
+message VerifyRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // The version that made the signature.
+  uint32 key_version = 2;
+  bytes message = 3;
+  bytes signature = 4;
+}
+
+message VerifyResponse {
+  bool valid = 1;
+}
+
+message HmacRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // At most 64 KiB.
+  bytes message = 2;
+}
+
+message HmacResponse {
+  bytes mac = 1;
+  uint32 key_version = 2;
+}
+
+message VerifyHmacRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // The version that computed the MAC.
+  uint32 key_version = 2;
+  bytes message = 3;
+  bytes mac = 4;
+}
+
+message VerifyHmacResponse {
+  bool valid = 1;
+}
+
+message IssueJwtRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  // JWT claims as a JSON object.
+  google.protobuf.Struct claims = 2;
+}
+
+message IssueJwtResponse {
+  // Compact serialization.
+  string jwt = 1;
+  uint32 key_version = 2;
+}
+
+message GetPublicKeyRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+  uint32 version = 2;
+}
+
+message GetPublicKeyResponse {
+  // PEM-encoded SubjectPublicKeyInfo.
+  string pem = 1;
+  uint32 key_version = 2;
+  // For example Ed25519 or ES256.
+  string algorithm = 3;
+}
+
+message GetJwksRequest {
+  // projects/{project}/environments/{environment}/keys/{key}
+  string key = 1;
+}
+
+message GetJwksResponse {
+  repeated Jwk keys = 1;
+}
+
+// A public JSON Web Key (RFC 7517). Fields not used by the key type are empty.
+message Jwk {
+  string kty = 1;
+  string crv = 2;
+  string x = 3;
+  string y = 4;
+  string n = 5;
+  string e = 6;
+  string kid = 7;
+  string alg = 8;
+  string use = 9;
+}
+
+message BatchRequest {
+  // At most 100.
+  repeated BatchItem items = 1;
+}
+
+message BatchItem {
+  oneof op {
+    EncryptRequest encrypt = 1;
+    DecryptRequest decrypt = 2;
+    RewrapRequest rewrap = 3;
+    SignRequest sign = 4;
+    VerifyRequest verify = 5;
+    HmacRequest hmac = 6;
+    VerifyHmacRequest verify_hmac = 7;
+    IssueJwtRequest issue_jwt = 8;
+  }
+}
+
+message BatchResponse {
+  // One per item, in request order.
+  repeated BatchResult results = 1;
+}
+
+message BatchResult {
+  oneof result {
+    EncryptResponse encrypt = 1;
+    DecryptResponse decrypt = 2;
+    RewrapResponse rewrap = 3;
+    SignResponse sign = 4;
+    VerifyResponse verify = 5;
+    HmacResponse hmac = 6;
+    VerifyHmacResponse verify_hmac = 7;
+    IssueJwtResponse issue_jwt = 8;
+    // Set when this item failed.
+    Problem error = 15;
+  }
+}
