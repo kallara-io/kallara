@@ -66,7 +66,8 @@ service CryptoService {
     };
   }
 
-  // Issue a signed JWT with the given claims. The header carries the key version as kid.
+  // Issue a signed JWT with the given claims. The header's kid is "<key_id>:<version>", where
+  // key_id is the key's public ID, as in kal:v1 ciphertexts.
   rpc IssueJwt(IssueJwtRequest) returns (IssueJwtResponse) {
     option (google.api.http) = {
       post: "/v1/{key=projects/*/environments/*/keys/*}:issueJwt"
@@ -79,9 +80,11 @@ service CryptoService {
     option (google.api.http) = {get: "/v1/{key=projects/*/environments/*/keys/*}/versions/{version}/publicKey"};
   }
 
-  // The JSON Web Key Set of a JWT key, for anyone verifying its tokens. Needs no access token.
+  // The JSON Web Key Set of a JWT key, for anyone verifying its tokens. Needs no access token, so
+  // the key is named by its public key_id (the part of a JWT kid before the colon), never by its
+  // resource name. An unknown key_id and a key that is not a JWT key both get not_found.
   rpc GetJwks(GetJwksRequest) returns (GetJwksResponse) {
-    option (google.api.http) = {get: "/v1/{key=projects/*/environments/*/keys/*}/jwks.json"};
+    option (google.api.http) = {get: "/v1/jwks/{key_id}"};
   }
 
   // Run up to 100 operations. Each item succeeds or fails on its own; results keep request order.
@@ -208,8 +211,8 @@ message GetPublicKeyResponse {
 }
 
 message GetJwksRequest {
-  // projects/{project}/environments/{environment}/keys/{key}
-  string key = 1;
+  // The key's public ID: 26 characters of Crockford base32, as in kal:v1 ciphertexts.
+  string key_id = 1;
 }
 
 message GetJwksResponse {
@@ -224,11 +227,13 @@ message Jwk {
   string y = 4;
   string n = 5;
   string e = 6;
+  // "<key_id>:<version>".
   string kid = 7;
   string alg = 8;
   string use = 9;
 }
 
+// At most 100 items and 4 MiB in total; a larger request gets invalid_request.
 message BatchRequest {
   // At most 100.
   repeated BatchItem items = 1;

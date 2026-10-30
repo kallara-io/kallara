@@ -30,7 +30,14 @@ def main(openapi_path: Path, errors_path: Path) -> None:
             if op["operationId"] in PUBLIC:
                 op["security"] = []
 
-    spec["components"]["schemas"]["Problem"]["properties"]["code"]["enum"] = codes
+    # Listed, not an enum: strict clients would reject codes added after they were generated.
+    spec["components"]["schemas"]["Problem"]["properties"]["code"]["x-kallara-codes"] = codes
+    # gnostic writes format "bytes", which OpenAPI 3.0 does not define; protobuf JSON sends base64.
+    for schema in spec["components"]["schemas"].values():
+        for prop in schema.get("properties", {}).values():
+            if prop.get("format") == "bytes":
+                prop["format"] = "byte"
+                prop["description"] = (prop.get("description", "") + " Base64-encoded.").strip()
     spec["components"]["securitySchemes"] = {"bearer": {"type": "http", "scheme": "bearer"}}
     spec["security"] = [{"bearer": []}]
 
