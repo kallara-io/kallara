@@ -15,8 +15,11 @@ first for the project, status and Phase 1 plan.
 - Everything here is public: no internal hostnames, customer names or platform internals.
 - SDKs never hold keys. They run the `parse_invalid` and `context_invalid` vectors and the parse
   part of `valid`; only the crypto service runs `decrypt_invalid`.
+- `proto/` is the `/v1` contract. Regenerate the OpenAPI with `proto/tools/generate.sh` (`--check` to
+  verify); never hand-edit `proto/openapi/openapi.yaml`. Changes to `v1` are additive only. Public
+  error codes live in `proto/kallara/v1/errors.json`.
 
 ## Planned layout (Phase 1)
 
-`proto/` (protobuf + generated OpenAPI) · `agent/` (Go agent and `kallara` CLI, one module) ·
+`agent/` (Go agent and `kallara` CLI, one module) ·
 `sdks/python`, `sdks/node`, `sdks/go`, each running the conformance vectors in CI.

@@ -12,7 +12,7 @@ This repository holds everything that runs on **your** infrastructure, in the op
 | --- | --- | --- |
 | [`spec/`](spec/) | Wire and data formats | Ciphertext v1 drafted |
 | [`conformance/`](conformance/) | Test vectors every implementation must pass | Ciphertext v1 vectors |
-| `proto/` | The `/v1` API contract (protobuf + OpenAPI) | Phase 1 |
+| [`proto/`](proto/) | The `/v1` API contract (protobuf + OpenAPI): key operations and secrets | Draft |
 | `agent/` | Kallara Agent and the `kallara` CLI (Go) | Phase 1 |
 | `sdks/python`, `sdks/node`, `sdks/go` | SDKs | Phase 1 |
 | `sdks/java`, `sdks/dotnet`, `sdks/php` | SDKs | Phase 2 |
