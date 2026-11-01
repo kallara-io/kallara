@@ -29,6 +29,7 @@ EXPECTED = {
     "unauthenticated": (401, "UNAUTHENTICATED"),
     "permission_denied": (403, "PERMISSION_DENIED"),
     "not_found": (404, "NOT_FOUND"),
+    "already_exists": (409, "ALREADY_EXISTS"),
     "secret_scheduled_for_deletion": (409, "FAILED_PRECONDITION"),
     "rate_limited": (429, "RESOURCE_EXHAUSTED"),
     "unavailable": (503, "UNAVAILABLE"),

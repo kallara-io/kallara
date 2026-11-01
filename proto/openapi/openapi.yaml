@@ -934,6 +934,7 @@ components:
           - unauthenticated
           - permission_denied
           - not_found
+          - already_exists
           - secret_scheduled_for_deletion
           - rate_limited
           - unavailable
