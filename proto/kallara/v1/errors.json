@@ -15,6 +15,7 @@
     {"code": "unauthenticated", "http": 401, "grpc": "UNAUTHENTICATED", "title": "The request has no valid access token."},
     {"code": "permission_denied", "http": 403, "grpc": "PERMISSION_DENIED", "title": "The caller may not perform this operation on this resource."},
     {"code": "not_found", "http": 404, "grpc": "NOT_FOUND", "title": "The resource does not exist."},
+    {"code": "already_exists", "http": 409, "grpc": "ALREADY_EXISTS", "title": "A resource with this name already exists."},
     {"code": "secret_scheduled_for_deletion", "http": 409, "grpc": "FAILED_PRECONDITION", "title": "The secret is scheduled for deletion; restore it first."},
     {"code": "rate_limited", "http": 429, "grpc": "RESOURCE_EXHAUSTED", "title": "Too many requests; retry later."},
     {"code": "unavailable", "http": 503, "grpc": "UNAVAILABLE", "title": "The service is temporarily unavailable; retry later."},
