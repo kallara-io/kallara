@@ -38,8 +38,10 @@ def main(openapi_path: Path, errors_path: Path) -> None:
             if prop.get("format") == "bytes":
                 prop["format"] = "byte"
                 prop["description"] = (prop.get("description", "") + " Base64-encoded.").strip()
-    spec["components"]["securitySchemes"] = {"bearer": {"type": "http", "scheme": "bearer"}}
-    spec["security"] = [{"bearer": []}]
+    spec["components"]["securitySchemes"] = {"dpop": {
+        "type": "http", "scheme": "DPoP",
+        "description": "DPoP-bound access token (RFC 9449): send `Authorization: DPoP <token>` and a `DPoP` proof header. See spec/auth-v1.md."}}
+    spec["security"] = [{"dpop": []}]
 
     openapi_path.write_text(yaml.safe_dump(spec, sort_keys=False, allow_unicode=True), encoding="utf-8")
 

@@ -8,6 +8,9 @@ every SDK. If two implementations disagree about a vector, at least one of them 
 | [`vectors/ciphertext-v1.json`](vectors/ciphertext-v1.json) | [`spec/ciphertext-v1.md`](../spec/ciphertext-v1.md): parsing, context rules, AAD and AES-256-GCM |
 | [`schema/ciphertext-v1.schema.json`](schema/ciphertext-v1.schema.json) | JSON Schema for the file above |
 | [`tools/gen_ciphertext_v1.py`](tools/gen_ciphertext_v1.py) | Deterministic generator, an independent reading of the spec |
+| [`vectors/auth-v1.json`](vectors/auth-v1.json) | [`spec/auth-v1.md`](../spec/auth-v1.md): JWK thumbprints, DPoP proofs and nonces, client assertions, enrollment JWTs, access tokens |
+| [`schema/auth-v1.schema.json`](schema/auth-v1.schema.json) | JSON Schema for the file above |
+| [`tools/gen_auth_v1.py`](tools/gen_auth_v1.py) | Deterministic generator, an independent reading of the spec |
 
 ## Who runs what
 
@@ -24,6 +27,10 @@ duplicate keys, a typed map cannot hold a number) skips vectors carrying that ca
 
 `error: null` in `parse_invalid` marks a boundary string that must parse successfully.
 
+For `auth-v1`, see [`spec/auth-v1.md` §10](../spec/auth-v1.md#10-conformance) for who runs which
+section. Every case pins `now` (and, for DPoP proofs, the nonce key), so results never depend on
+the clock.
+
 ## Changing vectors
 
 Vectors are generated, never hand-edited.
@@ -32,6 +39,8 @@ Vectors are generated, never hand-edited.
 pip install "cryptography>=50.0.2,<51" "jsonschema>=4.23,<5"
 python conformance/tools/gen_ciphertext_v1.py          # regenerate
 python conformance/tools/gen_ciphertext_v1.py --check  # what CI runs
+python conformance/tools/gen_auth_v1.py                # same for auth-v1
+python conformance/tools/gen_auth_v1.py --check
 ```
 
 A change to an existing vector's expected output is a breaking change to the format and needs a new

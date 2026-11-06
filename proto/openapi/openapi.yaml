@@ -1087,9 +1087,11 @@ components:
         valid:
           type: boolean
   securitySchemes:
-    bearer:
+    dpop:
       type: http
-      scheme: bearer
+      scheme: DPoP
+      description: 'DPoP-bound access token (RFC 9449): send `Authorization: DPoP
+        <token>` and a `DPoP` proof header. See spec/auth-v1.md.'
 tags:
 - name: CryptoService
   description: "Operations that use a named key without ever returning it. Algorithms\
@@ -1100,4 +1102,4 @@ tags:
     \ API keys.\n Values only ever travel in request and response bodies, never in\
     \ URLs."
 security:
-- bearer: []
+- dpop: []
