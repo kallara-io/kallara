@@ -700,6 +700,54 @@
       "expect": "iat_out_of_window"
     },
     {
+      "name": "typ-dpop",
+      "input": {
+        "client_assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjU1ZGI4MGQ4LTgzNDQtNGRhMS04NGEzLTY4Mjc2YTViMjA1YiIsInR5cCI6ImRwb3Arand0In0.eyJpc3MiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJzdWIiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJhdWQiOiJodHRwczovL3N0cy5leGFtcGxlLmNvbS9vYXV0aC90b2tlbiIsImlhdCI6MTc5ODAwMDAwMCwiZXhwIjoxNzk4MDAwMDYwLCJqdGkiOiI0MWI3MzYzZi1mYzdmLTQ5MWQtYjFjNy0xNTBkMDU3OWQxNjQifQ.wDRuDw9KdxMJs3xk-4Mb_3rey35zaRUY-uviS9nTAJNHGIE2JqwHhAFSg_tgeV4U4SBnUVzCduc38ew9IiBdCQ",
+        "client_id": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+        "audience": "https://sts.example.com/oauth/token",
+        "now": 1798000000,
+        "host_key": {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "x": "x_xnQfwWLToLHaRTWQ-XQxm4vsJZFy5tdd4VxM1rPKM",
+          "kid": "55db80d8-8344-4da1-84a3-68276a5b205b"
+        }
+      },
+      "expect": "bad_typ"
+    },
+    {
+      "name": "typ-enrollment",
+      "input": {
+        "client_assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjU1ZGI4MGQ4LTgzNDQtNGRhMS04NGEzLTY4Mjc2YTViMjA1YiIsInR5cCI6ImthbC1lbnJvbGwrand0In0.eyJpc3MiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJzdWIiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJhdWQiOiJodHRwczovL3N0cy5leGFtcGxlLmNvbS9vYXV0aC90b2tlbiIsImlhdCI6MTc5ODAwMDAwMCwiZXhwIjoxNzk4MDAwMDYwLCJqdGkiOiI2M2MwYzBkNS04NmU0LTRlYmMtYTY5ZC03NGY1OTg5MDI0MWUifQ.aLjfvqZNK6cWb5MZEqVuVtwgNIWFB1pmQs66VD7GM29q1OWxa2LQFauRIkCeOvSFZhreXTB1gc1vzuHmFCxGBw",
+        "client_id": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+        "audience": "https://sts.example.com/oauth/token",
+        "now": 1798000000,
+        "host_key": {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "x": "x_xnQfwWLToLHaRTWQ-XQxm4vsJZFy5tdd4VxM1rPKM",
+          "kid": "55db80d8-8344-4da1-84a3-68276a5b205b"
+        }
+      },
+      "expect": "bad_typ"
+    },
+    {
+      "name": "typ-rotation",
+      "input": {
+        "client_assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjU1ZGI4MGQ4LTgzNDQtNGRhMS04NGEzLTY4Mjc2YTViMjA1YiIsInR5cCI6ImthbC1yb3RhdGUrand0In0.eyJpc3MiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJzdWIiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJhdWQiOiJodHRwczovL3N0cy5leGFtcGxlLmNvbS9vYXV0aC90b2tlbiIsImlhdCI6MTc5ODAwMDAwMCwiZXhwIjoxNzk4MDAwMDYwLCJqdGkiOiJhMDFhNWQyZC0zMzUwLTRmYzQtYmM0Ni0xZjVkNjYwODMwNDAifQ.2lcVecjzZ9pdy81TmP4JR_J-iFf3P7018LVg32xREfObhU0_hS9iS37fdCkEJBimRALoLF6HsL1-Il2E6_6VBQ",
+        "client_id": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+        "audience": "https://sts.example.com/oauth/token",
+        "now": 1798000000,
+        "host_key": {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "x": "x_xnQfwWLToLHaRTWQ-XQxm4vsJZFy5tdd4VxM1rPKM",
+          "kid": "55db80d8-8344-4da1-84a3-68276a5b205b"
+        }
+      },
+      "expect": "bad_typ"
+    },
+    {
       "name": "audience-api",
       "input": {
         "client_assertion": "eyJhbGciOiJFZERTQSIsImtpZCI6IjU1ZGI4MGQ4LTgzNDQtNGRhMS04NGEzLTY4Mjc2YTViMjA1YiJ9.eyJpc3MiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJzdWIiOiI1MTNhNjVhNy0xNzU3LTRjNGUtYmEzNC0wN2Q2ZTU5NGQ2ZjgiLCJhdWQiOiJodHRwczovL2FwaS5leGFtcGxlLmNvbS92MS9lbmNyeXB0IiwiaWF0IjoxNzk4MDAwMDAwLCJleHAiOjE3OTgwMDAwNjAsImp0aSI6ImUyMjJmODYzLTE5YjctNDcwZC1iNTViLTFjNDY1MmIzODhhOCJ9.vmfWwS8AG84tpoT773bJcQ1f2hFHdmJ6LrMiciNciDGlXAPo4RAzinGZL3zPzx4dFKO5q_5LxD4FDd_DDajsBA",
@@ -1159,9 +1207,46 @@
       "expect": "expired"
     },
     {
-      "name": "exp-equals-now",
+      "name": "expired-30s-ago-within-leeway",
       "input": {
-        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtYXBpIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5MTAwLCJleHAiOjE3OTgwMDAwMDAsImp0aSI6IjkxNTJkNWUzLTY2N2QtNDM0Yy1hNWMwLTliMTMzYjk3MjAwYyIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJob3N0X2tleSIsImthbF9jcmVkIjoiNTVkYjgwZDgtODM0NC00ZGExLTg0YTMtNjgyNzZhNWIyMDViIn0.XETEg6f2XtEcYqnnUxVkm9uS1eY_R3H-bgMTO8EGqH-YgrWQsGHkTxJQkJCVzHODBivSPxrBaRGyvgAiaV0JCw",
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtYXBpIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5MDcwLCJleHAiOjE3OTc5OTk5NzAsImp0aSI6ImZjZDg2MTkwLTEwYzItNGFkMS05OWFhLWNjMGViY2I5OTRhYiIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJob3N0X2tleSIsImthbF9jcmVkIjoiNTVkYjgwZDgtODM0NC00ZGExLTg0YTMtNjgyNzZhNWIyMDViIn0.Hp-1zps9vTs0kHdb9Hfu8gv9tRs6UHDElC2EpdAMkX_EAxVPQCkL-wgrdvfgQFhm9fcsplhRA3C6QhWLqQbzAQ",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-api",
+        "now": 1798000000
+      },
+      "expect": "ok",
+      "output": {
+        "claims": {
+          "iss": "kallara-sts",
+          "aud": "kallara-api",
+          "sub": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+          "org": "425d647d-ca16-4a93-84d4-cb7703f3b0d1",
+          "iat": 1797999070,
+          "exp": 1797999970,
+          "jti": "fcd86190-10c2-4ad1-99aa-cc0ebcb994ab",
+          "cnf": {
+            "jkt": "-oHPQkRQkYJnSEbuLEhwli1T73ZrljgiSWS_Q7KPwN4"
+          },
+          "kal_amr": "host_key",
+          "kal_cred": "55db80d8-8344-4da1-84a3-68276a5b205b"
+        }
+      }
+    },
+    {
+      "name": "expired-31s-ago",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtYXBpIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5MDY5LCJleHAiOjE3OTc5OTk5NjksImp0aSI6IjI4MTUyNTI1LTBkNzYtNDJjYi1iYTMyLTI3NGM2OGIwYWM4MiIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJob3N0X2tleSIsImthbF9jcmVkIjoiNTVkYjgwZDgtODM0NC00ZGExLTg0YTMtNjgyNzZhNWIyMDViIn0.TKAQUQe4xtUFWG6Fd47RVYXPDn27wIxiVixkoDyucY21_dxn9vXhz0dmS_G5BRPIX-AucN1zF6eoJ73vqYgiCA",
         "jwks": {
           "keys": [
             {
@@ -1178,6 +1263,64 @@
         "now": 1798000000
       },
       "expect": "expired"
+    },
+    {
+      "name": "iat-30s-in-future-within-leeway",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtYXBpIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk4MDAwMDMwLCJleHAiOjE3OTgwMDA5MzAsImp0aSI6IjVhNGRkNzE4LTU2OGYtNDA5MC1hNDg4LTg0YTRkYTg0YjRmYSIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJob3N0X2tleSIsImthbF9jcmVkIjoiNTVkYjgwZDgtODM0NC00ZGExLTg0YTMtNjgyNzZhNWIyMDViIn0.QfLY0OoHxJWCzXXlycxrrs1UlF0jnj2RMoS1yc62BbjUbs-UgEzbUyphpusSJo72QiFWMsdsd_qQ6HGgD03ACQ",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-api",
+        "now": 1798000000
+      },
+      "expect": "ok",
+      "output": {
+        "claims": {
+          "iss": "kallara-sts",
+          "aud": "kallara-api",
+          "sub": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+          "org": "425d647d-ca16-4a93-84d4-cb7703f3b0d1",
+          "iat": 1798000030,
+          "exp": 1798000930,
+          "jti": "5a4dd718-568f-4090-a488-84a4da84b4fa",
+          "cnf": {
+            "jkt": "-oHPQkRQkYJnSEbuLEhwli1T73ZrljgiSWS_Q7KPwN4"
+          },
+          "kal_amr": "host_key",
+          "kal_cred": "55db80d8-8344-4da1-84a3-68276a5b205b"
+        }
+      }
+    },
+    {
+      "name": "iat-31s-in-future",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtYXBpIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk4MDAwMDMxLCJleHAiOjE3OTgwMDA5MzEsImp0aSI6IjVhMzMwZDdhLTVmY2UtNDdkYi04ODkyLTg4NjEwNzRiY2YxYyIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJob3N0X2tleSIsImthbF9jcmVkIjoiNTVkYjgwZDgtODM0NC00ZGExLTg0YTMtNjgyNzZhNWIyMDViIn0.hypN-yV9LpmptnFS-UgP335ecSV5aNcLC1CNg5-xQze-Daws0iz4pfFmzTqLboQyxSSH9uwD9apC5qjR_DqYCQ",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-api",
+        "now": 1798000000
+      },
+      "expect": "iat_out_of_window"
     },
     {
       "name": "audience-manage",

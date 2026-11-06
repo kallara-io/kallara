@@ -192,7 +192,9 @@ def access_token_vectors() -> list[dict]:
     oidc_claims = access_claims(HOST_ED, amr="oidc", label="at-oidc")
     next_key_claims = access_claims(HOST_ED, label="at-next-key")
     expired_claims = access_claims(HOST_ED, iat=NOW - 1000, label="at-expired")
-    edge_claims = access_claims(HOST_ED, iat=NOW - 900, label="at-edge")
+    # Access tokens get exactly 30 s of leeway on exp and iat.
+    leeway = {name: access_claims(HOST_ED, iat=NOW + off, label=f"at-{name}") for name, off in
+              [("exp-30", -930), ("exp-31", -931), ("iat-30", 30), ("iat-31", 31)]}
     hk = access_claims(HOST_ED, label="at-bad")
     return [
         case("host-key-token", inp(AT_ED), "ok", {"claims": access_claims(HOST_ED, label="at-ed")}),
@@ -209,7 +211,13 @@ def access_token_vectors() -> list[dict]:
         case("alg-es256-on-eddsa-key", inp(jwt({"kid": STS_A_KID}, hk, STS_A, alg="ES256")),
              "bad_alg"),
         case("expired", inp(jwt({"kid": STS_A_KID}, expired_claims, STS_A)), "expired"),
-        case("exp-equals-now", inp(jwt({"kid": STS_A_KID}, edge_claims, STS_A)), "expired"),
+        case("expired-30s-ago-within-leeway", inp(jwt({"kid": STS_A_KID}, leeway["exp-30"], STS_A)),
+             "ok", {"claims": leeway["exp-30"]}),
+        case("expired-31s-ago", inp(jwt({"kid": STS_A_KID}, leeway["exp-31"], STS_A)), "expired"),
+        case("iat-30s-in-future-within-leeway", inp(jwt({"kid": STS_A_KID}, leeway["iat-30"], STS_A)),
+             "ok", {"claims": leeway["iat-30"]}),
+        case("iat-31s-in-future", inp(jwt({"kid": STS_A_KID}, leeway["iat-31"], STS_A)),
+             "iat_out_of_window"),
         case("audience-manage", inp(jwt({"kid": STS_A_KID}, access_claims(
             HOST_ED, aud="kallara-manage", label="at-manage"), STS_A)), "wrong_audience"),
         case("audience-other-service", inp(jwt({"kid": STS_A_KID}, access_claims(
@@ -346,8 +354,8 @@ def assertion_vectors() -> list[dict]:
         return {"iss": IDENTITY, "sub": IDENTITY, "aud": aud, "iat": iat, "exp": iat + lifetime,
                 "jti": derive_uuid(f"assert/{label}")}
 
-    def sign(c: dict, key: Key = HOST_ED, **kw: object) -> str:
-        return jwt({"kid": HOST_KEY_ID}, c, key, **kw)
+    def sign(c: dict, key: Key = HOST_ED, typ: str | None = None, **kw: object) -> str:
+        return jwt({"kid": HOST_KEY_ID} | ({"typ": typ} if typ else {}), c, key, **kw)
 
     c_ed, c_p256, c_short = claims("ed"), claims("p256"), claims("short", lifetime=1)
     a_ed = sign(c_ed)
@@ -363,6 +371,9 @@ def assertion_vectors() -> list[dict]:
         case("expired", inp(sign(claims("expired", iat=NOW - 120))), "expired"),
         case("exp-equals-now", inp(sign(claims("exp-now", iat=NOW - 60))), "expired"),
         case("iat-in-future", inp(sign(claims("iat-future", iat=NOW + 120))), "iat_out_of_window"),
+        case("typ-dpop", inp(sign(claims("typ-dpop"), typ="dpop+jwt")), "bad_typ"),
+        case("typ-enrollment", inp(sign(claims("typ-enroll"), typ="kal-enroll+jwt")), "bad_typ"),
+        case("typ-rotation", inp(sign(claims("typ-rotate"), typ="kal-rotate+jwt")), "bad_typ"),
         case("audience-api", inp(sign(claims("aud-api", aud=API_URL))), "wrong_audience"),
         case("audience-issuer-name", inp(sign(claims("aud-iss", aud=ISSUER))), "wrong_audience"),
         case("audience-enroll-endpoint", inp(sign(claims("aud-enroll", aud=ENROLL_URL))),

@@ -60,7 +60,7 @@
           },
           "additionalProperties": false
         },
-        "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "iat_out_of_window",
+        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "expired", "iat_out_of_window",
                             "wrong_audience", "lifetime_too_long"]},
         "output": {
           "type": "object",
@@ -115,7 +115,8 @@
           },
           "additionalProperties": false
         },
-        "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "wrong_audience", "lifetime_too_long"]},
+        "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "iat_out_of_window", "wrong_audience",
+                            "lifetime_too_long"]},
         "output": {
           "type": "object",
           "required": ["claims"],

@@ -21,13 +21,15 @@ with one of:
 
 Access tokens use `EdDSA` only. A verifier MUST refuse `none`, every HMAC algorithm, every other
 algorithm, and an `alg` that does not match the key's type. It MUST NOT let the token choose the
-algorithm.
+algorithm. It checks `alg` (allowed, and matching the key's type) **before** the signature, so a
+JWT with a bad `alg` is refused as such whether or not its signature would verify.
 
 **Thumbprints** (`jkt`) are RFC 7638 JWK thumbprints with SHA-256: the required members only
 (`crv kty x` for OKP, `crv kty x y` for EC), in that order, no whitespace, hashed, base64url.
 
-**Times** are seconds since the Unix epoch. The windows below are exact: a verifier allows no
-extra leeway.
+**Times** are seconds since the Unix epoch. DPoP proofs, client assertions, enrollment JWTs and
+new-key proofs have their own exact windows (§3, §4.1, §5): a verifier adds no leeway to them.
+Access tokens and OIDC tokens are checked with exactly 30 seconds of leeway (§4.2, §6).
 
 **Identifiers.** The workload identity ID, the org ID and the host key ID are opaque strings
 (today, lowercase UUIDs). Clients store and echo them; they never parse them.
@@ -64,7 +66,9 @@ once; every token it signed stops working and clients simply fetch a new token.
 ## 3. DPoP proofs and nonces
 
 Every request to the token endpoint, `/v1` and `/manage/v1` carries a `DPoP` header holding a proof
-JWT (RFC 9449), signed by the workload's DPoP key.
+JWT (RFC 9449), signed by the workload's DPoP key. The exceptions are the unauthenticated
+endpoints: the token service's discovery and JWKS documents (§2), `GET /v1/jwks/{key_id}`, and the
+enrollment and rotation endpoints (§5), which take no proof.
 
 **Header:** `typ` = `dpop+jwt`, `alg` = `EdDSA` or `ES256`, `jwk` = the public key (no private
 members).
@@ -80,10 +84,15 @@ members).
 | `nonce` | a server nonce (below), always required |
 | `ath` | base64url(SHA-256(ASCII access token)); required when an access token is presented |
 
-**`htu` matching.** The server removes any query and fragment from `htu`, applies RFC 3986
-syntax- and scheme-based normalization (scheme and host lowercased, a default port removed), and
-compares the result with the endpoint's *configured public URL*, not the URL a proxy forwarded.
-The path is compared exactly: a trailing slash is a different URL.
+**`htu` matching.** The server compares `htu` with the endpoint's *configured public URL*, not the
+URL a proxy forwarded, after exactly these normalizations of `htu`, and no others:
+
+1. lower-case the scheme and the host;
+2. drop the port if it is the scheme's default (`443` for `https`, `80` for `http`);
+3. drop the query and the fragment.
+
+The path is compared byte for byte: no percent-decoding, no dot-segment removal, and a trailing
+slash is a different URL.
 
 **Nonces** are stateless and change every 300 seconds:
 
@@ -119,7 +128,8 @@ client_assertion=<JWT signed by the host key>
 The client assertion:
 
 - header: `alg` (`EdDSA` or `ES256`, matching the host key) and `kid` = the host key ID. No `typ`
-  is required.
+  is required, but an assertion MUST NOT carry `typ` `dpop+jwt`, `kal-enroll+jwt` or
+  `kal-rotate+jwt`; one that does is refused, so no other Kallara JWT can stand in for it.
 - claims: `iss` and `sub` = `client_id`; `aud` = the URL of the endpoint it is sent to, as a
   string (here the token endpoint URL); `iat`; `exp`; `jti`.
 - `exp - iat <= 60`, `iat <= now + 60`, and `now < exp`.
@@ -140,10 +150,13 @@ that identity's trust rules matches:
 
 - signed with `RS256`, `ES256` or `EdDSA` under the issuer's keys, fetched over HTTPS from the
   issuer's OpenID configuration, or pinned in the rule;
-- `iss` equals the rule's issuer exactly, and `aud` the rule's audience (default
-  `kallara:<org_id>`);
+- `iss` equals the rule's issuer exactly;
+- `aud` is a single string equal to the rule's audience (default `kallara:<org_id>`); an array is
+  refused, even one holding only that value;
 - `sub` and every extra claim in the rule are exactly equal;
-- `exp` and `iat` present, the token not expired, and `exp - iat <= 86400`.
+- `exp` and `iat` present, `exp - iat <= 86400`, and, with 30 s of leeway: not expired
+  (`exp + 30 >= now`), not issued in the future (`iat - 30 <= now`), and, when `nbf` is present,
+  already valid (`nbf - 30 <= now`).
 
 ### 4.3 Both grants
 
@@ -170,11 +183,12 @@ them:
 | Status | Body | When |
 | --- | --- | --- |
 | `400` | `{"error":"use_dpop_nonce"}` plus a `DPoP-Nonce` header | the proof has no nonce or a stale one (RFC 9449 §8). Retry once with the new nonce. |
-| `401` | `{"error":"invalid_client"}` | any other failure of a `client_credentials` request |
-| `400` | `{"error":"invalid_grant"}` | any other failure of any other request |
+| `401` | `{"error":"invalid_client"}` | `grant_type=client_credentials` and the request fails for any reason other than the nonce, the rate limit or an unavailable backend: a bad assertion, a bad DPoP proof, an unknown identity, a revoked, pending or expired key, an inactive org |
+| `400` | `{"error":"invalid_grant"}` | any other `grant_type` (including a missing or unknown one) and the request fails for any reason other than the nonce, the rate limit or an unavailable backend |
+| `429` | `{"error":"slow_down"}` | too many requests for this identity or from this client address. Back off before retrying. |
 | `503` | `{"error":"temporarily_unavailable"}` | a backend the service needs is down. Retry with backoff. |
 
-The body is the same whatever the cause: a bad signature, an unknown identity, a revoked key, a
+The token endpoint is rate-limited per identity and per client address. The body is the same whatever the cause: a bad signature, an unknown identity, a revoked key, a
 replayed proof and a malformed request all look alike, and take about the same time. The cause is
 recorded only in Kallara's audit log. The nonce is checked before the credentials, so
 `use_dpop_nonce` says nothing about them.
@@ -239,13 +253,15 @@ past the enrollment limit.
 
 | Status | Body | When |
 | --- | --- | --- |
-| `401` | `{"error":"invalid_client"}` | the assertion or the current key fails |
-| `400` | `{"error":"invalid_grant","error_description":"reenroll_required"}` | less than one day remains before the enrollment limit |
+| `401` | `{"error":"invalid_client"}` | the assertion or the current key fails, including a key that has already expired |
+| `400` | `{"error":"invalid_grant","error_description":"reenroll_required"}` | the assertion verifies, and less than one day remains before the enrollment limit |
 | `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof |
 | `503` | `{"error":"temporarily_unavailable"}` | a backend is down |
 
 `reenroll_required` is the one error that names its cause, because the SDK must act on it: the
-machine needs a fresh enrollment code from an admin. This endpoint takes no DPoP proof.
+machine needs a fresh enrollment code from an admin. It is returned only after the client assertion
+has verified, so it reveals nothing to someone without the current key. This endpoint takes no DPoP
+proof.
 
 ## 6. Access tokens
 
@@ -264,11 +280,14 @@ Header: `alg` = `EdDSA`, `kid` = the signing key's ID in the JWKS.
 | `kal_cred` | the ID of the credential used: the host key or the OIDC trust rule |
 
 A verifier accepts a token only if: `alg` is `EdDSA`; `kid` names a key in the current JWKS; the
-signature verifies; `iss` is `kallara-sts`; `aud` is `kallara-api`; `exp - iat <= 900`; and
-`now < exp`. Clients treat the token as opaque.
+signature verifies; `iss` is `kallara-sts`; `aud` is `kallara-api`; `exp - iat <= 900`; and, with
+exactly 30 s of leeway, the token is not expired (`exp + 30 >= now`), not issued in the future
+(`iat - 30 <= now`) and, if it has `nbf`, already valid (`nbf - 30 <= now`). Clients treat the token
+as opaque.
 
-Tokens for `/manage/v1` have the same form with `aud` = `kallara-manage`; how people get them is
-outside this version.
+Until people can sign in, management tokens for `/manage/v1` are issued to people outside this
+version. They carry `aud` = `kallara-manage` and the same core claims (`iss sub org iat exp jti
+cnf`), but no `kal_amr` or `kal_cred`.
 
 ## 7. Resource servers
 
@@ -311,7 +330,11 @@ in the set. Until they hold keys they answer `503 unavailable`.
 - At enrollment, print the key's thumbprint so an admin can compare it.
 - Rotate the host key once two-thirds of its life (from when it was made to `expires`) has passed.
 - On `reenroll_required`, stop rotating and report that the machine needs a new enrollment code.
-  Report `renewal_due: true` the same way, early.
+  Report `renewal_due: true` the same way, early. If the host key has already expired, the token
+  and rotation endpoints answer `401 invalid_client`; the only way back is to enroll a new key with
+  a fresh code.
+- On `429 slow_down` or `503 temporarily_unavailable`, back off exponentially, with jitter, before
+  retrying.
 - Fetch a new access token shortly before `expires_in` runs out, and on any `401` other than
   `use_dpop_nonce`. Never cache tokens on disk.
 - Make a fresh proof for every request, and use the latest `DPoP-Nonce`.
@@ -333,7 +356,8 @@ in the set. Until they hold keys they answer `503 unavailable`.
   link-local, multicast, reserved and cloud metadata addresses are refused.
 - **Uniform errors.** Clients learn nothing from a refusal except where the format above says so.
 - **Fail closed.** If replay or revocation state cannot be read, requests are refused.
-- **Clocks.** Proofs allow ±60 s of skew. A client with a badly wrong clock cannot authenticate.
+- **Clocks.** Proofs allow ±60 s of skew and access tokens 30 s. A client with a badly wrong clock
+  cannot authenticate.
 - **Retired keys** are dropped by verifiers within 5 minutes, and at once when the service
   announces an emergency rotation.
 
@@ -349,8 +373,10 @@ in the set. Until they hold keys they answer `503 unavailable`.
 - `access_tokens`: tokens with the JWKS, audience and `now`.
 
 Each case has `name`, `input`, and either `expect: "ok"` with an `output`, or `expect: "<reason>"`.
-Each invalid case has exactly one defect, so the order of checks does not matter. The reasons are
-for tests and audit only; clients only ever see the errors in §4, §5 and §7.
+Each invalid case has one defect, so the order of checks does not matter, with one exception: a case
+with a bad `alg` (such as `none`, or `HS256` keyed with the public key) also has a signature that
+does not verify, and reports `bad_alg` because `alg` is checked first (§1). The reasons are for
+tests and audit only; clients only ever see the errors in §4, §5 and §7.
 
 | Reason | Meaning |
 | --- | --- |
@@ -359,12 +385,12 @@ for tests and audit only; clients only ever see the errors in §4, §5 and §7.
 | `bad_alg` | `alg` is not allowed, or does not match the key |
 | `htm_mismatch` | `htm` is not the request method |
 | `htu_mismatch` | `htu` is not the endpoint's configured URL |
-| `iat_out_of_window` | `iat` outside the allowed window |
+| `iat_out_of_window` | `iat` outside the allowed window (for access tokens: more than 30 s in the future) |
 | `ath_mismatch` | `ath` missing or not the hash of the presented token |
 | `jkt_mismatch` | the proof key is not the token's `cnf.jkt` |
 | `nonce_missing` | the proof has no `nonce` |
 | `nonce_invalid` | the nonce is not from the current or previous window under this service's key |
-| `expired` | `now >= exp` |
+| `expired` | `now >= exp`; for access tokens, `exp + 30 < now` |
 | `wrong_audience` | `aud` is not the expected value |
 | `lifetime_too_long` | `exp - iat` above the limit (60 s for assertions, 900 s for access tokens) |
 
