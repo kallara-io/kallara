@@ -232,7 +232,8 @@ endpoint until it is approved.
 
 Every failure, including an unknown, used or expired code, answers `400 {"error":"invalid_grant"}`.
 An unavailable backend answers `503 {"error":"temporarily_unavailable"}`. This endpoint takes no
-DPoP proof.
+DPoP proof. Enrollment and rotation (§5.2) are rate-limited per client address, and rotation also per
+identity once its assertion verifies; too many requests answer `429 {"error":"slow_down"}`.
 
 ### 5.2 Rotation
 
@@ -245,7 +246,10 @@ client_assertion=<JWT signed by the current host key, aud = the rotation endpoin
 new_key_proof=<JWT signed by the new host key>
 ```
 
-The client assertion follows §4.1, with `aud` = the rotation endpoint URL. The new-key proof:
+The client assertion follows §4.1, with `aud` = the rotation endpoint URL and one more claim,
+`new_jkt` = the RFC 7638 thumbprint (§1) of the new public key. The service refuses the request
+unless `new_jkt` equals the thumbprint of the key in the new-key proof, so an assertion intercepted on
+its way cannot be paired with someone else's key. The new-key proof:
 
 - header: `typ` = `kal-rotate+jwt`, `alg`, `jwk` = the new public key.
 - claims: `key_id` = the current key's ID (the assertion's `kid`), `aud` = the rotation endpoint
@@ -259,7 +263,8 @@ past the enrollment limit.
 | --- | --- | --- |
 | `401` | `{"error":"invalid_client"}` | the assertion or the current key fails, including a key that has already expired |
 | `400` | `{"error":"invalid_grant","error_description":"reenroll_required"}` | the assertion verifies, and less than one day remains before the enrollment limit |
-| `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof |
+| `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof or a `new_jkt` that does not match it |
+| `429` | `{"error":"slow_down"}` | too many requests from this client address or for this identity |
 | `503` | `{"error":"temporarily_unavailable"}` | a backend is down |
 
 `reenroll_required` is the one error that names its cause, because the SDK must act on it: the
