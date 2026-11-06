@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kallara-io/kallara/conformance/schema/auth-v1.schema.json",
+  "title": "Kallara auth v1 conformance vectors",
+  "type": "object",
+  "required": ["spec", "thumbprints", "dpop_proofs", "client_assertions", "enrollment_requests", "access_tokens"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "spec": {"const": "spec/auth-v1.md"},
+    "generator": {"type": "string"},
+    "warning": {"type": "string"},
+    "thumbprints": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {"type": "object", "required": ["jwk"], "properties": {"jwk": {"$ref": "#/$defs/jwk"}}, "additionalProperties": false},
+        "expect": {"const": "ok"},
+        "output": {"$ref": "#/$defs/jkt_only"}
+      }}
+    },
+    "dpop_proofs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {
+          "type": "object",
+          "required": ["proof", "method", "url", "now", "nonce_key_hex"],
+          "properties": {
+            "proof": {"$ref": "#/$defs/jws"},
+            "method": {"type": "string"},
+            "url": {"type": "string", "pattern": "^https://[^?#]+$"},
+            "now": {"$ref": "#/$defs/time"},
+            "nonce_key_hex": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "access_token": {"$ref": "#/$defs/jws"},
+            "cnf_jkt": {"$ref": "#/$defs/b64u256"}
+          },
+          "dependentRequired": {"access_token": ["cnf_jkt"], "cnf_jkt": ["access_token"]},
+          "additionalProperties": false
+        },
+        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "htm_mismatch", "htu_mismatch",
+                            "iat_out_of_window", "ath_mismatch", "jkt_mismatch", "nonce_missing", "nonce_invalid"]},
+        "output": {
+          "type": "object",
+          "required": ["jkt", "jti"],
+          "properties": {"jkt": {"$ref": "#/$defs/b64u256"}, "jti": {"type": "string"}},
+          "additionalProperties": false
+        }
+      }}
+    },
+    "client_assertions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {
+          "type": "object",
+          "required": ["client_assertion", "client_id", "audience", "now", "host_key"],
+          "properties": {
+            "client_assertion": {"$ref": "#/$defs/jws"},
+            "client_id": {"type": "string"},
+            "audience": {"type": "string"},
+            "now": {"$ref": "#/$defs/time"},
+            "host_key": {"$ref": "#/$defs/jwk", "required": ["kid"]}
+          },
+          "additionalProperties": false
+        },
+        "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "iat_out_of_window",
+                            "wrong_audience", "lifetime_too_long"]},
+        "output": {
+          "type": "object",
+          "required": ["jti"],
+          "properties": {"jti": {"type": "string"}},
+          "additionalProperties": false
+        }
+      }}
+    },
+    "enrollment_requests": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {
+          "type": "object",
+          "required": ["enrollment_jwt", "audience", "now"],
+          "properties": {
+            "enrollment_jwt": {"$ref": "#/$defs/jws"},
+            "audience": {"type": "string"},
+            "now": {"$ref": "#/$defs/time"}
+          },
+          "additionalProperties": false
+        },
+        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "wrong_audience", "iat_out_of_window"]},
+        "output": {
+          "type": "object",
+          "required": ["jkt", "code", "jti"],
+          "properties": {
+            "jkt": {"$ref": "#/$defs/b64u256"},
+            "code": {"$ref": "#/$defs/b64u256"},
+            "jti": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      }}
+    },
+    "access_tokens": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {
+          "type": "object",
+          "required": ["access_token", "jwks", "audience", "now"],
+          "properties": {
+            "access_token": {"$ref": "#/$defs/jws"},
+            "jwks": {
+              "type": "object",
+              "required": ["keys"],
+              "properties": {"keys": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/jwk", "required": ["kid"]}}},
+              "additionalProperties": false
+            },
+            "audience": {"const": "kallara-api"},
+            "now": {"$ref": "#/$defs/time"}
+          },
+          "additionalProperties": false
+        },
+        "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "wrong_audience", "lifetime_too_long"]},
+        "output": {
+          "type": "object",
+          "required": ["claims"],
+          "properties": {"claims": {"$ref": "#/$defs/access_claims"}},
+          "additionalProperties": false
+        }
+      }}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expect"],
+      "properties": {"name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}, "input": true, "expect": true, "output": true},
+      "if": {"properties": {"expect": {"const": "ok"}}},
+      "then": {"required": ["output"]},
+      "else": {"not": {"required": ["output"]}},
+      "additionalProperties": false
+    },
+    "time": {"type": "integer", "minimum": 0},
+    "jws": {"type": "string", "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]*$"},
+    "b64u256": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
+    "jwk": {
+      "type": "object",
+      "required": ["kty", "crv", "x"],
+      "properties": {
+        "kty": {"enum": ["OKP", "EC"]},
+        "crv": {"enum": ["Ed25519", "P-256"]},
+        "x": {"$ref": "#/$defs/b64u256"},
+        "y": {"$ref": "#/$defs/b64u256"},
+        "kid": {"type": "string"},
+        "alg": {"enum": ["EdDSA", "ES256"]},
+        "use": {"const": "sig"}
+      },
+      "additionalProperties": false
+    },
+    "jkt_only": {
+      "type": "object",
+      "required": ["jkt"],
+      "properties": {"jkt": {"$ref": "#/$defs/b64u256"}},
+      "additionalProperties": false
+    },
+    "access_claims": {
+      "type": "object",
+      "required": ["iss", "aud", "sub", "org", "iat", "exp", "jti", "cnf", "kal_amr", "kal_cred"],
+      "properties": {
+        "iss": {"const": "kallara-sts"},
+        "aud": {"const": "kallara-api"},
+        "sub": {"type": "string"},
+        "org": {"type": "string"},
+        "iat": {"$ref": "#/$defs/time"},
+        "exp": {"$ref": "#/$defs/time"},
+        "jti": {"type": "string"},
+        "cnf": {
+          "type": "object",
+          "required": ["jkt"],
+          "properties": {"jkt": {"$ref": "#/$defs/b64u256"}},
+          "additionalProperties": false
+        },
+        "kal_amr": {"enum": ["host_key", "oidc"]},
+        "kal_cred": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

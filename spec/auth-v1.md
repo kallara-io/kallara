@@ -1,0 +1,378 @@
+# Kallara workload authentication v1
+
+Status: **Draft** · Applies to the token service, the `/v1` API and the `/manage/v1` API
+
+A workload proves who it is to the Kallara token service, with an enrolled host key or an OIDC
+token from a platform it runs on, and gets back a 15-minute access token. Every access token is
+bound to a key the workload holds (DPoP, RFC 9449), so a copied token is useless without that key.
+There are no refresh tokens: when a token expires, the workload proves itself again.
+
+The key words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.
+
+## 1. Common rules
+
+**JWTs** are compact JWS (RFC 7515), base64url without padding. Every JWT in this spec is signed
+with one of:
+
+| `alg` | Key | Signature |
+| --- | --- | --- |
+| `EdDSA` | Ed25519 (RFC 8037), JWK `kty=OKP`, `crv=Ed25519` | 64 bytes |
+| `ES256` | ECDSA P-256 with SHA-256, JWK `kty=EC`, `crv=P-256` | 64 bytes, `r ‖ s`, not DER |
+
+Access tokens use `EdDSA` only. A verifier MUST refuse `none`, every HMAC algorithm, every other
+algorithm, and an `alg` that does not match the key's type. It MUST NOT let the token choose the
+algorithm.
+
+**Thumbprints** (`jkt`) are RFC 7638 JWK thumbprints with SHA-256: the required members only
+(`crv kty x` for OKP, `crv kty x y` for EC), in that order, no whitespace, hashed, base64url.
+
+**Times** are seconds since the Unix epoch. The windows below are exact: a verifier allows no
+extra leeway.
+
+**Identifiers.** The workload identity ID, the org ID and the host key ID are opaque strings
+(today, lowercase UUIDs). Clients store and echo them; they never parse them.
+
+## 2. Discovery
+
+The token service publishes:
+
+- `GET /.well-known/oauth-authorization-server`: RFC 8414 metadata.
+
+  | Member | Value |
+  | --- | --- |
+  | `issuer` | the token service's public base URL |
+  | `token_endpoint` | `<base>/oauth/token` |
+  | `jwks_uri` | `<base>/.well-known/jwks.json` |
+  | `grant_types_supported` | `client_credentials`, `urn:ietf:params:oauth:grant-type:token-exchange` |
+  | `token_endpoint_auth_methods_supported` | `private_key_jwt`, `none` |
+  | `token_endpoint_auth_signing_alg_values_supported` | `EdDSA`, `ES256` |
+  | `dpop_signing_alg_values_supported` | `EdDSA`, `ES256` |
+  | `kallara_enrollment_endpoint` | `<base>/oauth/enroll` |
+  | `kallara_host_key_rotation_endpoint` | `<base>/oauth/host-keys/rotate` |
+
+  The metadata `issuer` is a URL as RFC 8414 requires. The `iss` claim of access tokens is the
+  fixed string `kallara-sts` (§6).
+
+- `GET /.well-known/jwks.json`: the public keys that sign access tokens, as a JWK Set. Each key has
+  `kty=OKP`, `crv=Ed25519`, `x`, `kid`, `alg=EdDSA` and `use=sig`. Retired keys are not listed.
+  The response carries `Cache-Control: max-age=60`.
+
+A new signing key is published at least one hour before it signs anything, and an old one stays
+published until an hour after its last token expires. In an emergency the service retires a key at
+once; every token it signed stops working and clients simply fetch a new token.
+
+## 3. DPoP proofs and nonces
+
+Every request to the token endpoint, `/v1` and `/manage/v1` carries a `DPoP` header holding a proof
+JWT (RFC 9449), signed by the workload's DPoP key.
+
+**Header:** `typ` = `dpop+jwt`, `alg` = `EdDSA` or `ES256`, `jwk` = the public key (no private
+members).
+
+**Claims:**
+
+| Claim | Rule |
+| --- | --- |
+| `jti` | unique per proof |
+| `htm` | the request method, exactly as sent (`POST`, uppercase) |
+| `htu` | the request URL without query and fragment |
+| `iat` | within ±60 s of the server's clock: `abs(now - iat) <= 60` |
+| `nonce` | a server nonce (below), always required |
+| `ath` | base64url(SHA-256(ASCII access token)); required when an access token is presented |
+
+**`htu` matching.** The server removes any query and fragment from `htu`, applies RFC 3986
+syntax- and scheme-based normalization (scheme and host lowercased, a default port removed), and
+compares the result with the endpoint's *configured public URL*, not the URL a proxy forwarded.
+The path is compared exactly: a trailing slash is a different URL.
+
+**Nonces** are stateless and change every 300 seconds:
+
+```
+window = floor(now / 300)
+nonce  = base64url(HMAC-SHA256(nonce_key, U64(window)))
+```
+
+`U64(n)` is `n` as an 8-byte big-endian unsigned integer. `nonce_key` is a per-service key; nonces
+from one service are not valid at another. A server accepts the nonce of the current window and
+of the previous one, and nothing else. Every response from the token service, `/v1` and
+`/manage/v1` carries a `DPoP-Nonce` header with the current nonce; clients use the latest one they
+received. Because a proof must carry a recent nonce, proofs cannot be made in advance.
+
+**One use per proof.** A server accepts each proof `jti` once per key for at least 10 minutes. A
+second use is refused.
+
+## 4. Token endpoint
+
+`POST /oauth/token`, `Content-Type: application/x-www-form-urlencoded`, with a `DPoP` proof for
+`POST` and the token endpoint URL (no `ath`). The proof key's thumbprint becomes the token's
+`cnf.jkt`.
+
+### 4.1 Host-key grant (RFC 7523 client authentication)
+
+```
+grant_type=client_credentials
+client_id=<workload identity ID>
+client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
+client_assertion=<JWT signed by the host key>
+```
+
+The client assertion:
+
+- header: `alg` (`EdDSA` or `ES256`, matching the host key) and `kid` = the host key ID. No `typ`
+  is required.
+- claims: `iss` and `sub` = `client_id`; `aud` = the URL of the endpoint it is sent to, as a
+  string (here the token endpoint URL); `iat`; `exp`; `jti`.
+- `exp - iat <= 60`, `iat <= now + 60`, and `now < exp`.
+- Each `jti` is accepted once per identity.
+- The key named by `kid` must belong to `client_id`, be active and not be expired.
+
+### 4.2 OIDC grant (RFC 8693 token exchange)
+
+```
+grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+client_id=<workload identity ID>
+subject_token_type=urn:ietf:params:oauth:token-type:jwt
+subject_token=<OIDC token>
+```
+
+The caller names the identity; Kallara never searches for one. The token is accepted if one of
+that identity's trust rules matches:
+
+- signed with `RS256`, `ES256` or `EdDSA` under the issuer's keys, fetched over HTTPS from the
+  issuer's OpenID configuration, or pinned in the rule;
+- `iss` equals the rule's issuer exactly, and `aud` the rule's audience (default
+  `kallara:<org_id>`);
+- `sub` and every extra claim in the rule are exactly equal;
+- `exp` and `iat` present, the token not expired, and `exp - iat <= 86400`.
+
+### 4.3 Both grants
+
+The org must be active and the identity must be a workload.
+
+**Success:** `200`, `Cache-Control: no-store`:
+
+```json
+{
+  "access_token": "<JWT>",
+  "token_type": "DPoP",
+  "expires_in": 900,
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "renewal_due": false
+}
+```
+
+`renewal_due` is present on host-key grants only. It is `true` when the host key's enrollment
+limit (§5) is less than 30 days away: the machine needs a fresh enrollment code soon.
+
+**Errors** use the OAuth format (RFC 6749 §5.2), not problem+json, so any OAuth library can read
+them:
+
+| Status | Body | When |
+| --- | --- | --- |
+| `400` | `{"error":"use_dpop_nonce"}` plus a `DPoP-Nonce` header | the proof has no nonce or a stale one (RFC 9449 §8). Retry once with the new nonce. |
+| `401` | `{"error":"invalid_client"}` | any other failure of a `client_credentials` request |
+| `400` | `{"error":"invalid_grant"}` | any other failure of any other request |
+| `503` | `{"error":"temporarily_unavailable"}` | a backend the service needs is down. Retry with backoff. |
+
+The body is the same whatever the cause: a bad signature, an unknown identity, a revoked key, a
+replayed proof and a malformed request all look alike, and take about the same time. The cause is
+recorded only in Kallara's audit log. The nonce is checked before the credentials, so
+`use_dpop_nonce` says nothing about them.
+
+## 5. Host keys
+
+A host key is an `Ed25519` or `P-256` key pair made on the machine, ideally in hardware. It
+expires at most 90 days after it is made, and never later than 365 days after the machine was
+first enrolled (the *enrollment limit*), however often it is rotated.
+
+### 5.1 Enrollment
+
+An admin creates a single-use enrollment code for one workload identity. It is 32 random bytes,
+base64url, and expires within an hour.
+
+`POST /oauth/enroll`, `Content-Type: application/x-www-form-urlencoded`, one parameter:
+
+```
+enrollment_jwt=<JWT signed by the new host key>
+```
+
+- header: `typ` = `kal-enroll+jwt`, `alg` (`EdDSA` or `ES256`), `jwk` = the new public key.
+- claims: `code` (the enrollment code), `aud` = the enrollment endpoint URL, `iat` within ±60 s,
+  `jti`.
+
+The signature proves the caller holds the private key. On success the code is used up and the
+response is `200`:
+
+```json
+{"key_id": "<host key ID>", "expires": "2027-02-04T10:00:00Z", "state": "active"}
+```
+
+`expires` is RFC 3339, UTC. `state` is `active`, or `pending` when a second admin must approve the
+key before it can be used (for workloads with production access). The approver compares the key's
+thumbprint with the one the machine printed. A pending key gets `invalid_client` at the token
+endpoint until it is approved.
+
+Every failure, including an unknown, used or expired code, answers `400 {"error":"invalid_grant"}`.
+An unavailable backend answers `503 {"error":"temporarily_unavailable"}`. This endpoint takes no
+DPoP proof.
+
+### 5.2 Rotation
+
+`POST /oauth/host-keys/rotate`, form-encoded:
+
+```
+client_id=<workload identity ID>
+client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
+client_assertion=<JWT signed by the current host key, aud = the rotation endpoint URL>
+new_key_proof=<JWT signed by the new host key>
+```
+
+The client assertion follows §4.1, with `aud` = the rotation endpoint URL. The new-key proof:
+
+- header: `typ` = `kal-rotate+jwt`, `alg`, `jwk` = the new public key.
+- claims: `key_id` = the current key's ID (the assertion's `kid`), `aud` = the rotation endpoint
+  URL, `iat` within ±60 s, `jti`.
+
+On success the current key is retired in the same step, and the response has the enrollment
+shape: `{"key_id", "expires", "state"}`. The new key's `expires` is at most 90 days away and never
+past the enrollment limit.
+
+| Status | Body | When |
+| --- | --- | --- |
+| `401` | `{"error":"invalid_client"}` | the assertion or the current key fails |
+| `400` | `{"error":"invalid_grant","error_description":"reenroll_required"}` | less than one day remains before the enrollment limit |
+| `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof |
+| `503` | `{"error":"temporarily_unavailable"}` | a backend is down |
+
+`reenroll_required` is the one error that names its cause, because the SDK must act on it: the
+machine needs a fresh enrollment code from an admin. This endpoint takes no DPoP proof.
+
+## 6. Access tokens
+
+Header: `alg` = `EdDSA`, `kid` = the signing key's ID in the JWKS.
+
+| Claim | Value |
+| --- | --- |
+| `iss` | `kallara-sts` |
+| `aud` | `kallara-api` |
+| `sub` | the workload identity ID |
+| `org` | the org ID |
+| `iat`, `exp` | `exp - iat = 900` |
+| `jti` | unique per token |
+| `cnf` | `{"jkt": <thumbprint of the DPoP key>}` |
+| `kal_amr` | `host_key` or `oidc` |
+| `kal_cred` | the ID of the credential used: the host key or the OIDC trust rule |
+
+A verifier accepts a token only if: `alg` is `EdDSA`; `kid` names a key in the current JWKS; the
+signature verifies; `iss` is `kallara-sts`; `aud` is `kallara-api`; `exp - iat <= 900`; and
+`now < exp`. Clients treat the token as opaque.
+
+Tokens for `/manage/v1` have the same form with `aud` = `kallara-manage`; how people get them is
+outside this version.
+
+## 7. Resource servers
+
+### 7.1 Requests
+
+```
+Authorization: DPoP <access token>
+DPoP: <proof for this method and URL, with ath>
+```
+
+The `Bearer` scheme is refused. The server checks the token (§6), the proof (§3) with `ath` equal
+to the hash of this token, and that the proof key's thumbprint equals the token's `cnf.jkt`. Tokens
+whose credential or identity has been revoked stop working on the next request, not when they
+expire.
+
+### 7.2 Errors
+
+The APIs answer with problem+json as for every other `/v1` error:
+
+| Status | Code | Headers |
+| --- | --- | --- |
+| `401` | `unauthenticated` | `WWW-Authenticate: DPoP error="use_dpop_nonce"` and `DPoP-Nonce`, when the nonce is missing or stale |
+| `401` | `unauthenticated` | `WWW-Authenticate: DPoP algs="EdDSA ES256"`, for every other token or proof failure |
+| `503` | `unavailable` | the service cannot check replay or revocation; it never lets a request through unchecked |
+
+A client that gets `use_dpop_nonce` retries once with the new nonce. A client that gets any other
+`401` fetches a new access token and retries once.
+
+### 7.3 Verifying keys
+
+Verifiers fetch the JWKS at startup and cache it, choose the key by `kid`, re-fetch on an unknown
+`kid` at most once every 30 seconds, re-fetch every 5 minutes, and drop any key that is no longer
+in the set. Until they hold keys they answer `503 unavailable`.
+
+## 8. SDK duties
+
+- Keep the host key and the DPoP key in hardware when the platform offers it (TPM, Secure Enclave,
+  Windows CNG, PKCS#11). Use `ES256` there if `EdDSA` is not available. Otherwise store the key
+  readable only by the workload's user. Never export it.
+- At enrollment, print the key's thumbprint so an admin can compare it.
+- Rotate the host key once two-thirds of its life (from when it was made to `expires`) has passed.
+- On `reenroll_required`, stop rotating and report that the machine needs a new enrollment code.
+  Report `renewal_due: true` the same way, early.
+- Fetch a new access token shortly before `expires_in` runs out, and on any `401` other than
+  `use_dpop_nonce`. Never cache tokens on disk.
+- Make a fresh proof for every request, and use the latest `DPoP-Nonce`.
+- Never log, print or report access tokens, assertions, proofs, enrollment codes, OIDC tokens or
+  private keys.
+
+## 9. Security considerations
+
+- **Sender-constrained tokens.** A stolen access token is useless without the DPoP private key.
+  Required nonces stop proofs made in advance, and one-use `jti` stops replay within a window.
+- **Host-key theft** is bounded: an admin revokes the key and its live tokens stop at once, and
+  even a thief who keeps rotating loses the key at the enrollment limit.
+- **Enrollment-code theft:** whoever uses the code first wins, and the real machine sees the code
+  refused. The audit log and the thumbprint shown to admins expose it; production keys also wait
+  for a second admin.
+- **OIDC trust:** the caller names the identity, so two orgs that trust the same issuer never
+  collide. The default audience names the org, so a token minted for another service is useless
+  here. Issuer keys are fetched only over HTTPS from public addresses; private, loopback,
+  link-local, multicast, reserved and cloud metadata addresses are refused.
+- **Uniform errors.** Clients learn nothing from a refusal except where the format above says so.
+- **Fail closed.** If replay or revocation state cannot be read, requests are refused.
+- **Clocks.** Proofs allow ±60 s of skew. A client with a badly wrong clock cannot authenticate.
+- **Retired keys** are dropped by verifiers within 5 minutes, and at once when the service
+  announces an emergency rotation.
+
+## 10. Conformance
+
+[`conformance/vectors/auth-v1.json`](../conformance/vectors/auth-v1.json) holds:
+
+- `thumbprints`: JWKs and their `jkt`;
+- `dpop_proofs`: proofs with the method, configured URL, `now`, nonce key and, at a resource
+  server, the access token and its `cnf.jkt`;
+- `client_assertions`: assertions with `client_id`, audience, `now` and the host key;
+- `enrollment_requests`: enrollment JWTs with the audience and `now`;
+- `access_tokens`: tokens with the JWKS, audience and `now`.
+
+Each case has `name`, `input`, and either `expect: "ok"` with an `output`, or `expect: "<reason>"`.
+Each invalid case has exactly one defect, so the order of checks does not matter. The reasons are
+for tests and audit only; clients only ever see the errors in §4, §5 and §7.
+
+| Reason | Meaning |
+| --- | --- |
+| `bad_signature` | the signature does not verify, or `kid` names no known key |
+| `bad_typ` | `typ` is missing or wrong |
+| `bad_alg` | `alg` is not allowed, or does not match the key |
+| `htm_mismatch` | `htm` is not the request method |
+| `htu_mismatch` | `htu` is not the endpoint's configured URL |
+| `iat_out_of_window` | `iat` outside the allowed window |
+| `ath_mismatch` | `ath` missing or not the hash of the presented token |
+| `jkt_mismatch` | the proof key is not the token's `cnf.jkt` |
+| `nonce_missing` | the proof has no `nonce` |
+| `nonce_invalid` | the nonce is not from the current or previous window under this service's key |
+| `expired` | `now >= exp` |
+| `wrong_audience` | `aud` is not the expected value |
+| `lifetime_too_long` | `exp - iat` above the limit (60 s for assertions, 900 s for access tokens) |
+
+SDKs and the agent run `thumbprints`, and check that the proofs, assertions and enrollment JWTs
+they build pass these rules. The token service runs `dpop_proofs`, `client_assertions` and
+`enrollment_requests`; every resource server runs `dpop_proofs` and `access_tokens`. Replay and
+revocation need server state and are not in the vectors.
+
+ES256 signatures in the vectors are deterministic (RFC 6979) only so the file is reproducible.
+Implementations sign ES256 with random nonces and only verify these cases. The keys, codes and
+tokens in the vectors are published test data and must never be used for real workloads.
