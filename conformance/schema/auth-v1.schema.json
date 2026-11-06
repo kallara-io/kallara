@@ -35,8 +35,9 @@
           "dependentRequired": {"access_token": ["cnf_jkt"], "cnf_jkt": ["access_token"]},
           "additionalProperties": false
         },
-        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "htm_mismatch", "htu_mismatch",
-                            "iat_out_of_window", "ath_mismatch", "jkt_mismatch", "nonce_missing", "nonce_invalid"]},
+        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "bad_jwk", "htm_mismatch",
+                            "htu_mismatch", "iat_out_of_window", "ath_mismatch", "jkt_mismatch", "nonce_missing",
+                            "nonce_invalid"]},
         "output": {
           "type": "object",
           "required": ["jkt", "jti"],
@@ -83,7 +84,8 @@
           },
           "additionalProperties": false
         },
-        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "wrong_audience", "iat_out_of_window"]},
+        "expect": {"enum": ["ok", "bad_signature", "bad_typ", "bad_alg", "bad_jwk", "wrong_audience",
+                            "iat_out_of_window"]},
         "output": {
           "type": "object",
           "required": ["jkt", "code", "jti"],

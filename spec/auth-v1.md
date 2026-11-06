@@ -23,6 +23,10 @@ Access tokens use `EdDSA` only. A verifier MUST refuse `none`, every HMAC algori
 algorithm, and an `alg` that does not match the key's type. It MUST NOT let the token choose the
 algorithm. It checks `alg` (allowed, and matching the key's type) **before** the signature, so a
 JWT with a bad `alg` is refused as such whether or not its signature would verify.
+A verifier MUST refuse an Ed25519 public key of small order (any encoding of one of the eight
+points that multiplication by 8 sends to the identity, against which signatures can be forged without
+a private key) wherever a JWT carries its key in a `jwk` header: DPoP proofs, enrollment JWTs and
+new-key proofs.
 
 **Thumbprints** (`jkt`) are RFC 7638 JWK thumbprints with SHA-256: the required members only
 (`crv kty x` for OKP, `crv kty x y` for EC), in that order, no whitespace, hashed, base64url.
@@ -383,6 +387,7 @@ tests and audit only; clients only ever see the errors in §4, §5 and §7.
 | `bad_signature` | the signature does not verify, or `kid` names no known key |
 | `bad_typ` | `typ` is missing or wrong |
 | `bad_alg` | `alg` is not allowed, or does not match the key |
+| `bad_jwk` | the header `jwk` is not an acceptable public key: a private member, another key type, or a small-order Ed25519 point |
 | `htm_mismatch` | `htm` is not the request method |
 | `htu_mismatch` | `htu` is not the endpoint's configured URL |
 | `iat_out_of_window` | `iat` outside the allowed window (for access tokens: more than 30 s in the future) |

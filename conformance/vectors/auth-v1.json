@@ -510,6 +510,17 @@
         "nonce_key_hex": "bddddc4019138cd8905ee192e16d0c57f1ec55a6dfa96a32f4df7cb1e78cbbb9"
       },
       "expect": "nonce_invalid"
+    },
+    {
+      "name": "small-order-key-forged",
+      "input": {
+        "proof": "eyJhbGciOiJFZERTQSIsInR5cCI6ImRwb3Arand0IiwiandrIjp7Imt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiQVFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQSJ9fQ.eyJqdGkiOiIxOGEwNGU5Zi01NjFjLTQwOWItODllOC0xZWM3ZGMyZGVhYzkiLCJodG0iOiJQT1NUIiwiaHR1IjoiaHR0cHM6Ly9zdHMuZXhhbXBsZS5jb20vb2F1dGgvdG9rZW4iLCJpYXQiOjE3OTgwMDAwMDAsIm5vbmNlIjoiMU1BQXRNYXhZQ1FtVEswUXl4Q0s3dDMtM1ZRU25KcXRuMWMzNnlQOUxpcyJ9.AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "method": "POST",
+        "url": "https://sts.example.com/oauth/token",
+        "now": 1798000000,
+        "nonce_key_hex": "bddddc4019138cd8905ee192e16d0c57f1ec55a6dfa96a32f4df7cb1e78cbbb9"
+      },
+      "expect": "bad_jwk"
     }
   ],
   "client_assertions": [
@@ -937,6 +948,15 @@
         "now": 1798000000
       },
       "expect": "iat_out_of_window"
+    },
+    {
+      "name": "small-order-key-forged",
+      "input": {
+        "enrollment_jwt": "eyJhbGciOiJFZERTQSIsInR5cCI6ImthbC1lbnJvbGwrand0IiwiandrIjp7Imt0eSI6Ik9LUCIsImNydiI6IkVkMjU1MTkiLCJ4IjoiQVFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQSJ9fQ.eyJjb2RlIjoiRGFndXd1VzVHak40YlNHYXRhVTRYZ3J1dE9EMkRyVVQ5QjlLYXRGMFBUSSIsImF1ZCI6Imh0dHBzOi8vc3RzLmV4YW1wbGUuY29tL29hdXRoL2Vucm9sbCIsImlhdCI6MTc5ODAwMDAwMCwianRpIjoiYjI1MWQxYTUtMDA0Yi00Mzk3LTkyOTctMzgzNjc1YjBmOGQ3In0.AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "audience": "https://sts.example.com/oauth/enroll",
+        "now": 1798000000
+      },
+      "expect": "bad_jwk"
     }
   ],
   "access_tokens": [
