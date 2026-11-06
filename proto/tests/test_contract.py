@@ -121,9 +121,12 @@ def test_problem_type_documents_urn(spec: dict[str, Any]) -> None:
     assert "urn:kallara:error:" in spec["components"]["schemas"]["Problem"]["properties"]["type"]["description"]
 
 
-def test_bearer_auth(spec: dict[str, Any]) -> None:
-    assert spec["components"]["securitySchemes"]["bearer"] == {"type": "http", "scheme": "bearer"}
-    assert spec["security"] == [{"bearer": []}]
+def test_dpop_auth(spec: dict[str, Any]) -> None:
+    schemes = spec["components"]["securitySchemes"]
+    assert list(schemes) == ["dpop"]
+    assert {k: schemes["dpop"][k] for k in ("type", "scheme")} == {"type": "http", "scheme": "DPoP"}
+    assert "spec/auth-v1.md" in schemes["dpop"]["description"]
+    assert spec["security"] == [{"dpop": []}]
     ops = {op["operationId"]: op for _, op in _operations(spec)}
     assert ops["CryptoService_GetJwks"]["security"] == []
     assert all("security" not in op for name, op in ops.items() if name != "CryptoService_GetJwks")

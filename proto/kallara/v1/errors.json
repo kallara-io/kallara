@@ -12,7 +12,7 @@
     {"code": "plaintext_too_long", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "The plaintext is larger than 64 KiB."},
     {"code": "context_mismatch", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "This key requires an encryption context and none was sent."},
     {"code": "invalid_request", "http": 400, "grpc": "INVALID_ARGUMENT", "title": "A field in the request is missing or malformed."},
-    {"code": "unauthenticated", "http": 401, "grpc": "UNAUTHENTICATED", "title": "The request has no valid access token."},
+    {"code": "unauthenticated", "http": 401, "grpc": "UNAUTHENTICATED", "title": "The request has no valid DPoP-bound access token."},
     {"code": "permission_denied", "http": 403, "grpc": "PERMISSION_DENIED", "title": "The caller may not perform this operation on this resource."},
     {"code": "not_found", "http": 404, "grpc": "NOT_FOUND", "title": "The resource does not exist."},
     {"code": "already_exists", "http": 409, "grpc": "ALREADY_EXISTS", "title": "A resource with this name already exists."},
