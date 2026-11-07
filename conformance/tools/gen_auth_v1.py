@@ -30,7 +30,7 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 OUT = Path(__file__).resolve().parents[1] / "vectors" / "auth-v1.json"
@@ -105,9 +105,26 @@ assert thumbprint({"kty": "OKP", "crv": "Ed25519",
                    "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}) == \
     "kPrK_qmxVWaYVA9wwBF6Iuo3vVzz7TxHCTwXBygrS4k"
 
+class SmallOrderKey(Key):
+    """The Ed25519 identity point as a "public key": R = identity, S = 0 verifies for every message,
+    so whoever presents it needs no private key. Verifiers refuse it as bad_jwk (§1)."""
+
+    def __init__(self) -> None:  # no private key exists
+        self.alg = "EdDSA"
+        self.raw_public = b"\x01" + bytes(31)
+        self.jwk = {"kty": "OKP", "crv": "Ed25519", "x": b64u(self.raw_public)}
+
+    def sign(self, data: bytes) -> bytes:
+        sig = self.raw_public + bytes(32)
+        # The forgery verifies under a plain Ed25519 check: refusing the key is the only defence.
+        Ed25519PublicKey.from_public_bytes(self.raw_public).verify(sig, data)
+        return sig
+
+
 HOST_ED = Key("host-ed25519", "EdDSA")
 HOST_P256 = Key("host-p256", "ES256")
 OTHER_ED = Key("other-ed25519", "EdDSA")
+SMALL_ORDER = SmallOrderKey()
 STS_A = Key("sts-a", "EdDSA")
 STS_B = Key("sts-b", "EdDSA")
 STS_A_KID, STS_B_KID = "sts-test-a", "sts-test-b"
@@ -340,6 +357,7 @@ def dpop_proof_vectors() -> list[dict]:
             "nonce-other", nonce_value=nonce(OTHER_NONCE_KEY, NOW)))), "nonce_invalid"),
         case("nonce-garbage", at_token(proof(HOST_ED, pc("nonce-garbage", nonce_value="abc"))),
              "nonce_invalid"),
+        case("small-order-key-forged", at_token(proof(SMALL_ORDER, pc("small-order"))), "bad_jwk"),
     ]
 
 
@@ -419,6 +437,7 @@ def enrollment_vectors() -> list[dict]:
         case("iat-61s-in-past", inp(req(claims("iat-past", iat=NOW - 61))), "iat_out_of_window"),
         case("iat-61s-in-future", inp(req(claims("iat-future", iat=NOW + 61))),
              "iat_out_of_window"),
+        case("small-order-key-forged", inp(req(claims("small-order"), SMALL_ORDER)), "bad_jwk"),
     ]
 
 

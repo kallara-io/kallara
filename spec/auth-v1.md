@@ -23,6 +23,10 @@ Access tokens use `EdDSA` only. A verifier MUST refuse `none`, every HMAC algori
 algorithm, and an `alg` that does not match the key's type. It MUST NOT let the token choose the
 algorithm. It checks `alg` (allowed, and matching the key's type) **before** the signature, so a
 JWT with a bad `alg` is refused as such whether or not its signature would verify.
+A verifier MUST refuse an Ed25519 public key of small order (any encoding of one of the eight
+points that multiplication by 8 sends to the identity, against which signatures can be forged without
+a private key) wherever a JWT carries its key in a `jwk` header: DPoP proofs, enrollment JWTs and
+new-key proofs.
 
 **Thumbprints** (`jkt`) are RFC 7638 JWK thumbprints with SHA-256: the required members only
 (`crv kty x` for OKP, `crv kty x y` for EC), in that order, no whitespace, hashed, base64url.
@@ -228,7 +232,8 @@ endpoint until it is approved.
 
 Every failure, including an unknown, used or expired code, answers `400 {"error":"invalid_grant"}`.
 An unavailable backend answers `503 {"error":"temporarily_unavailable"}`. This endpoint takes no
-DPoP proof.
+DPoP proof. Enrollment and rotation (§5.2) are rate-limited per client address, and rotation also per
+identity once its assertion verifies; too many requests answer `429 {"error":"slow_down"}`.
 
 ### 5.2 Rotation
 
@@ -241,7 +246,10 @@ client_assertion=<JWT signed by the current host key, aud = the rotation endpoin
 new_key_proof=<JWT signed by the new host key>
 ```
 
-The client assertion follows §4.1, with `aud` = the rotation endpoint URL. The new-key proof:
+The client assertion follows §4.1, with `aud` = the rotation endpoint URL and one more claim,
+`new_jkt` = the RFC 7638 thumbprint (§1) of the new public key. The service refuses the request
+unless `new_jkt` equals the thumbprint of the key in the new-key proof, so an assertion intercepted on
+its way cannot be paired with someone else's key. The new-key proof:
 
 - header: `typ` = `kal-rotate+jwt`, `alg`, `jwk` = the new public key.
 - claims: `key_id` = the current key's ID (the assertion's `kid`), `aud` = the rotation endpoint
@@ -255,7 +263,8 @@ past the enrollment limit.
 | --- | --- | --- |
 | `401` | `{"error":"invalid_client"}` | the assertion or the current key fails, including a key that has already expired |
 | `400` | `{"error":"invalid_grant","error_description":"reenroll_required"}` | the assertion verifies, and less than one day remains before the enrollment limit |
-| `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof |
+| `400` | `{"error":"invalid_grant"}` | any other failure, such as a bad new-key proof or a `new_jkt` that does not match it |
+| `429` | `{"error":"slow_down"}` | too many requests from this client address or for this identity |
 | `503` | `{"error":"temporarily_unavailable"}` | a backend is down |
 
 `reenroll_required` is the one error that names its cause, because the SDK must act on it: the
@@ -383,6 +392,7 @@ tests and audit only; clients only ever see the errors in §4, §5 and §7.
 | `bad_signature` | the signature does not verify, or `kid` names no known key |
 | `bad_typ` | `typ` is missing or wrong |
 | `bad_alg` | `alg` is not allowed, or does not match the key |
+| `bad_jwk` | the header `jwk` is not an acceptable public key: a private member, another key type, or a small-order Ed25519 point |
 | `htm_mismatch` | `htm` is not the request method |
 | `htu_mismatch` | `htu` is not the endpoint's configured URL |
 | `iat_out_of_window` | `iat` outside the allowed window (for access tokens: more than 30 s in the future) |
