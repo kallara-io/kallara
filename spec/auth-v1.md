@@ -1,11 +1,12 @@
-# Kallara workload authentication v1
+# Kallara authentication v1
 
 Status: **Draft** · Applies to the token service, the `/v1` API and the `/manage/v1` API
 
 A workload proves who it is to the Kallara token service, with an enrolled host key or an OIDC
 token from a platform it runs on, and gets back a 15-minute access token. Every access token is
 bound to a key the workload holds (DPoP, RFC 9449), so a copied token is useless without that key.
-There are no refresh tokens: when a token expires, the workload proves itself again.
+There are no refresh tokens for workloads: when a token expires, the workload proves itself again.
+People sign in with a browser and a passkey and get a refresh token (§11).
 
 The key words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.
 
@@ -49,7 +50,12 @@ The token service publishes:
   | `issuer` | the token service's public base URL |
   | `token_endpoint` | `<base>/oauth/token` |
   | `jwks_uri` | `<base>/.well-known/jwks.json` |
-  | `grant_types_supported` | `client_credentials`, `urn:ietf:params:oauth:grant-type:token-exchange` |
+  | `authorization_endpoint` | `<base>/oauth/authorize` |
+  | `revocation_endpoint` | `<base>/oauth/revoke` |
+  | `grant_types_supported` | `client_credentials`, `urn:ietf:params:oauth:grant-type:token-exchange`, `authorization_code`, `refresh_token` |
+  | `response_types_supported` | `code` |
+  | `code_challenge_methods_supported` | `S256` |
+  | `authorization_response_iss_parameter_supported` | `true` |
   | `token_endpoint_auth_methods_supported` | `private_key_jwt`, `none` |
   | `token_endpoint_auth_signing_alg_values_supported` | `EdDSA`, `ES256` |
   | `dpop_signing_alg_values_supported` | `EdDSA`, `ES256` |
@@ -294,9 +300,9 @@ exactly 30 s of leeway, the token is not expired (`exp + 30 >= now`), not issued
 (`iat - 30 <= now`) and, if it has `nbf`, already valid (`nbf - 30 <= now`). Clients treat the token
 as opaque.
 
-Until people can sign in, management tokens for `/manage/v1` are issued to people outside this
-version. They carry `aud` = `kallara-manage` and the same core claims (`iss sub org iat exp jti
-cnf`), but no `kal_amr` or `kal_cred`.
+Management tokens for `/manage/v1` are issued to people (§11). They carry `aud` = `kallara-manage`
+and the same core claims, plus the people claims in §11.4. The verifier's rules are the same, with
+`kallara-manage` as the expected audience.
 
 ## 7. Resource servers
 
@@ -367,6 +373,11 @@ in the set. Until they hold keys they answer `503 unavailable`.
 - **Fail closed.** If replay or revocation state cannot be read, requests are refused.
 - **Clocks.** Proofs allow ±60 s of skew and access tokens 30 s. A client with a badly wrong clock
   cannot authenticate.
+- **Phishing resistance.** Passkeys are bound to the sign-in page's origin, so a look-alike site
+  cannot get a usable assertion. The authorization code is single use, lives 60 seconds and is bound
+  to the PKCE verifier and the client's DPoP key, so a code taken from the redirect is useless.
+- **Refresh-token theft.** Refresh tokens are bound to the DPoP key, rotate on every use and end
+  the session when an old one is presented. A session never outlives 12 hours from the passkey tap.
 - **Retired keys** are dropped by verifiers within 5 minutes, and at once when the service
   announces an emergency rotation.
 
@@ -379,7 +390,8 @@ in the set. Until they hold keys they answer `503 unavailable`.
   server, the access token and its `cnf.jkt`;
 - `client_assertions`: assertions with `client_id`, audience, `now` and the host key;
 - `enrollment_requests`: enrollment JWTs with the audience and `now`;
-- `access_tokens`: tokens with the JWKS, audience and `now`.
+- `access_tokens`: tokens with the JWKS, audience and `now`, for workloads and for people;
+- `pkce`: code verifiers and the S256 challenge each one gives, or `bad_verifier` (§11.2).
 
 Each case has `name`, `input`, and either `expect: "ok"` with an `output`, or `expect: "<reason>"`.
 Each invalid case has one defect, so the order of checks does not matter, with one exception: a case
@@ -402,13 +414,147 @@ tests and audit only; clients only ever see the errors in §4, §5 and §7.
 | `nonce_invalid` | the nonce is not from the current or previous window under this service's key |
 | `expired` | `now >= exp`; for access tokens, `exp + 30 < now` |
 | `wrong_audience` | `aud` is not the expected value |
+| `bad_verifier` | a PKCE verifier is not 43 to 128 characters of `[A-Za-z0-9._~-]` |
+| `malformed` | a claim has the wrong type: `auth_time` is not an integer |
 | `lifetime_too_long` | `exp - iat` above the limit (60 s for assertions, 900 s for access tokens) |
 
 SDKs and the agent run `thumbprints`, and check that the proofs, assertions and enrollment JWTs
 they build pass these rules. The token service runs `dpop_proofs`, `client_assertions` and
-`enrollment_requests`; every resource server runs `dpop_proofs` and `access_tokens`. Replay and
+`enrollment_requests`; every resource server runs `dpop_proofs` and `access_tokens`. The token service and every client
+that builds a challenge run `pkce`. Replay and
 revocation need server state and are not in the vectors.
 
 ES256 signatures in the vectors are deterministic (RFC 6979) only so the file is reproducible.
 Implementations sign ES256 with random nonces and only verify these cases. The keys, codes and
 tokens in the vectors are published test data and must never be used for real workloads.
+
+## 11. People
+
+A person signs in with a browser. The Go CLI (`kallara login`) and SDKs run an OAuth 2.0 authorization
+code flow for native apps (RFC 8252) with PKCE (RFC 7636) and DPoP (RFC 9449), and get a 15-minute
+management access token and a refresh token. The sign-in pages themselves are not part of this
+contract; the endpoints below are.
+
+### 11.1 Authorization endpoint
+
+`GET /oauth/authorize`, opened in the person's browser:
+
+| Parameter | Rule |
+| --- | --- |
+| `response_type` | `code` |
+| `client_id` | `kallara-cli`, a public client with no secret |
+| `redirect_uri` | `http://127.0.0.1:<port>/callback`, port 1024 to 65535, exactly this path, no query |
+| `code_challenge`, `code_challenge_method` | `S256` only (§11.2) |
+| `state` | required, opaque |
+| `dpop_jkt` | required: the thumbprint (§1) of the DPoP key the client will use. It binds the code to that key (RFC 9449 §10). |
+| `max_age` | optional, seconds. `300` forces a new passkey tap (§11.6). |
+
+When the person has signed in, the browser is redirected to `redirect_uri` with `code`, `state` and
+`iss` (RFC 9207). The client MUST check that `state` is the value it sent and that `iss` equals the
+metadata `issuer`, before it uses the code. The code is 32 random bytes, base64url, valid for 60
+seconds and for one redemption.
+
+Errors: once `redirect_uri` is valid, the service redirects to it with `error=invalid_request`
+(plus `state` and `iss`) for any other defect, and shows no detail. When `client_id` or
+`redirect_uri` is itself invalid, the service shows an error page and redirects nowhere.
+
+### 11.2 PKCE
+
+The verifier is 43 to 128 characters from `[A-Za-z0-9._~-]`, made from random bytes. The challenge is
+`base64url(SHA-256(verifier))` without padding. `plain` is refused. The `pkce` vectors give verifiers
+and their challenges, and the verifiers that are refused.
+
+### 11.3 Token endpoint grants
+
+Both grants are `POST /oauth/token` as in §4, with a DPoP proof (§3) for the endpoint. The proof key's
+thumbprint becomes the token's `cnf.jkt`.
+
+`authorization_code`:
+
+```
+grant_type=authorization_code
+client_id=kallara-cli
+code=<code>
+code_verifier=<verifier>
+redirect_uri=<the redirect_uri of the authorization request>
+```
+
+The code is accepted once, only with the verifier whose challenge was sent, the same `redirect_uri`,
+and a proof whose key thumbprint equals the `dpop_jkt` sent to the authorization endpoint. The
+service re-reads the person at this point: someone removed or reset since signing in gets
+`invalid_grant`.
+
+`refresh_token`:
+
+```
+grant_type=refresh_token
+client_id=kallara-cli
+refresh_token=<refresh token>
+```
+
+The proof key MUST be the key the session was started with. Success returns a new access token and a
+new refresh token; the presented refresh token stops working. Presenting a refresh token that was
+already replaced ends the whole session (§11.5). Refreshing never moves `auth_time`.
+
+Success for both grants: `200`, `Cache-Control: no-store`:
+
+```json
+{
+  "access_token": "<JWT>",
+  "token_type": "DPoP",
+  "expires_in": 900,
+  "refresh_token": "<opaque>"
+}
+```
+
+Errors are as in §4.3. Every failure of these grants other than the nonce, the rate limit or an
+unavailable backend is `400 {"error":"invalid_grant"}` with the same body whatever the cause: a wrong
+code or verifier, a reused code, another DPoP key, a removed person, an ended or expired session.
+
+A session ends 12 hours (43200 s) after `auth_time`, and 2 hours (7200 s) after its last refresh,
+whichever comes first. Both are checked on every refresh.
+
+### 11.4 People's access tokens
+
+The format of §6, with these differences:
+
+| Claim | Value |
+| --- | --- |
+| `aud` | `kallara-manage` |
+| `sub` | the person's identity ID |
+| `kal_amr` | a string: `passkey+pwd` (passkey and password). Later versions add `passkey+sso`. |
+| `kal_cred` | the session ID |
+| `auth_time` | integer, seconds: when the passkey was last tapped. A token whose `auth_time` is not an integer is `malformed`. |
+
+The control plane reads the person's role from its database on every request.
+
+### 11.5 Revocation and ending sessions
+
+`POST /oauth/revoke` (RFC 7009), `application/x-www-form-urlencoded` with `token=<refresh token>`
+and a DPoP proof for the endpoint. It ends the session and answers `200` whatever the token was, so
+nothing leaks. Access tokens of an ended session stop working on the next request (§7.1), as do all
+of a person's sessions when they are removed, reset, or have their role changed.
+
+### 11.6 Step-up
+
+Some actions need a recent passkey tap: approving or rejecting a request, and listing or removing
+one's own passkeys. When `now - auth_time > 300`, `/manage/v1` answers `401` with
+
+```
+WWW-Authenticate: DPoP error="insufficient_user_authentication", max_age=300
+```
+
+(RFC 9470). The client runs the authorization flow again with `max_age=300`, which forces a new
+passkey tap, and retries the request with the new token.
+
+### 11.7 Client duties
+
+- Listen on `127.0.0.1` only (never `localhost` or `0.0.0.0`), on a random port, for one request.
+- Use a fresh `state` and PKCE verifier per login. Check `state` and `iss` (§11.1).
+- Serialise refreshes per session with a lock (a file lock across processes). A second client that
+  presents the refresh token a first one just replaced looks like theft, and ends the session.
+  After taking the lock, re-read the stored token: it may already be new.
+- Store the refresh token readable only by the person (mode 0600) or in the OS keychain, and the DPoP
+  key as in §8. Never log it.
+- On `invalid_grant` from a refresh, delete the stored session and run login again.
+- On `insufficient_user_authentication`, step up (§11.6) once.

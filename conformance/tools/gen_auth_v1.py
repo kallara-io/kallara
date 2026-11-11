@@ -41,6 +41,7 @@ NOW = 1798000000  # pinned "now" for every time-dependent case
 WINDOW = 300
 ISSUER = "kallara-sts"
 API_AUDIENCE = "kallara-api"
+MANAGE_AUDIENCE = "kallara-manage"
 TOKEN_URL = "https://sts.example.com/oauth/token"
 ENROLL_URL = "https://sts.example.com/oauth/enroll"
 API_URL = "https://api.example.com/v1/encrypt"
@@ -133,6 +134,7 @@ ORG = derive_uuid("org")
 IDENTITY = derive_uuid("identity")
 HOST_KEY_ID = derive_uuid("host-key")
 OIDC_RULE_ID = derive_uuid("oidc-rule")
+SESSION_ID = derive_uuid("session")
 NONCE_KEY = derive("nonce-key/service", 32)
 OTHER_NONCE_KEY = derive("nonce-key/other-service", 32)
 
@@ -213,6 +215,17 @@ def access_token_vectors() -> list[dict]:
     leeway = {name: access_claims(HOST_ED, iat=NOW + off, label=f"at-{name}") for name, off in
               [("exp-30", -930), ("exp-31", -931), ("iat-30", 30), ("iat-31", 31)]}
     hk = access_claims(HOST_ED, label="at-bad")
+
+    def person(label: str, **over: object) -> dict:
+        c = access_claims(HOST_ED, aud=MANAGE_AUDIENCE, amr="passkey+pwd", label=label)
+        c["kal_cred"] = SESSION_ID
+        c["auth_time"] = NOW - 600
+        return {**c, **over}
+
+    def pinp(c: dict) -> dict:
+        return {**inp(jwt({"kid": STS_A_KID}, c, STS_A)), "audience": MANAGE_AUDIENCE}
+
+    pc = person("at-person")
     return [
         case("host-key-token", inp(AT_ED), "ok", {"claims": access_claims(HOST_ED, label="at-ed")}),
         case("oidc-token", inp(jwt({"kid": STS_A_KID}, oidc_claims, STS_A)), "ok",
@@ -243,6 +256,38 @@ def access_token_vectors() -> list[dict]:
             HOST_ED, lifetime=901, label="at-901"), STS_A)), "lifetime_too_long"),
         case("lifetime-1h", inp(jwt({"kid": STS_A_KID}, access_claims(
             HOST_ED, lifetime=3600, label="at-3600"), STS_A)), "lifetime_too_long"),
+        case("person-token", pinp(pc), "ok", {"claims": pc}),
+        case("person-token-audience-api", inp(jwt({"kid": STS_A_KID}, pc, STS_A)), "wrong_audience"),
+        case("person-token-auth-time-string", pinp(person("at-person-str", auth_time="1797999400")),
+             "malformed"),
+        case("person-token-auth-time-float", pinp(person("at-person-flt", auth_time=1797999400.5)),
+             "malformed"),
+    ]
+
+
+# --- PKCE (RFC 7636) -----------------------------------------------------------------------------
+
+def pkce_vectors() -> list[dict]:
+    def challenge(v: str) -> str:
+        return b64u(hashlib.sha256(v.encode("ascii")).digest())
+
+    def ok(name: str, v: str) -> dict:
+        return case(name, {"verifier": v}, "ok", {"challenge": challenge(v)})
+
+    v43 = b64u(derive("pkce/43", 32))
+    v128 = b64u(derive("pkce/128", 96))[:128]
+    assert len(v43) == 43 and len(v128) == 128
+    return [
+        case("rfc7636-appendix-b", {"verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"}, "ok",
+             {"challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}),
+        ok("length-43", v43),
+        ok("length-128", v128),
+        ok("unreserved-punctuation", "a.b_c~d-" * 5 + "xyz"),
+        case("length-42", {"verifier": v43[:42]}, "bad_verifier"),
+        case("length-129", {"verifier": v128 + "A"}, "bad_verifier"),
+        case("plus-character", {"verifier": v43[:20] + "+" + v43[21:]}, "bad_verifier"),
+        case("slash-character", {"verifier": v43[:20] + "/" + v43[21:]}, "bad_verifier"),
+        case("equals-padding", {"verifier": v43[:42] + "="}, "bad_verifier"),
     ]
 
 
@@ -465,6 +510,7 @@ def build() -> str:
         "client_assertions": assertion_vectors(),
         "enrollment_requests": enrollment_vectors(),
         "access_tokens": access_token_vectors(),
+        "pkce": pkce_vectors(),
     }
     return json.dumps(doc, indent=2, ensure_ascii=True) + "\n"
 

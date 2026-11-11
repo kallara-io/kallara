@@ -1425,6 +1425,184 @@
         "now": 1798000000
       },
       "expect": "lifetime_too_long"
+    },
+    {
+      "name": "person-token",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtbWFuYWdlIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5OTAwLCJleHAiOjE3OTgwMDA4MDAsImp0aSI6ImIzN2Y0YjZmLWJlZTQtNDY5ZC04MDQzLTA2ODFkNTE4MDU2NiIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJwYXNza2V5K3B3ZCIsImthbF9jcmVkIjoiZTUyMmNhM2UtMTFjNS00YTA4LTk3NDUtNmFlNzdmYWQxMzlhIiwiYXV0aF90aW1lIjoxNzk3OTk5NDAwfQ.hduJ8cMm4P8zSwQLf29unMYAkIeuZP7tQVEPCJwcKv67DkkvHZEuH1TNpjCRKoGvP4Um3FqB81-sSKIH65VKDw",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-manage",
+        "now": 1798000000
+      },
+      "expect": "ok",
+      "output": {
+        "claims": {
+          "iss": "kallara-sts",
+          "aud": "kallara-manage",
+          "sub": "513a65a7-1757-4c4e-ba34-07d6e594d6f8",
+          "org": "425d647d-ca16-4a93-84d4-cb7703f3b0d1",
+          "iat": 1797999900,
+          "exp": 1798000800,
+          "jti": "b37f4b6f-bee4-469d-8043-0681d5180566",
+          "cnf": {
+            "jkt": "-oHPQkRQkYJnSEbuLEhwli1T73ZrljgiSWS_Q7KPwN4"
+          },
+          "kal_amr": "passkey+pwd",
+          "kal_cred": "e522ca3e-11c5-4a08-9745-6ae77fad139a",
+          "auth_time": 1797999400
+        }
+      }
+    },
+    {
+      "name": "person-token-audience-api",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtbWFuYWdlIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5OTAwLCJleHAiOjE3OTgwMDA4MDAsImp0aSI6ImIzN2Y0YjZmLWJlZTQtNDY5ZC04MDQzLTA2ODFkNTE4MDU2NiIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJwYXNza2V5K3B3ZCIsImthbF9jcmVkIjoiZTUyMmNhM2UtMTFjNS00YTA4LTk3NDUtNmFlNzdmYWQxMzlhIiwiYXV0aF90aW1lIjoxNzk3OTk5NDAwfQ.hduJ8cMm4P8zSwQLf29unMYAkIeuZP7tQVEPCJwcKv67DkkvHZEuH1TNpjCRKoGvP4Um3FqB81-sSKIH65VKDw",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-api",
+        "now": 1798000000
+      },
+      "expect": "wrong_audience"
+    },
+    {
+      "name": "person-token-auth-time-string",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtbWFuYWdlIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5OTAwLCJleHAiOjE3OTgwMDA4MDAsImp0aSI6IjgxZjU2ZGVmLWM1MGEtNDMzNi1hMWYyLTA2MTcyN2QxNzE2MSIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJwYXNza2V5K3B3ZCIsImthbF9jcmVkIjoiZTUyMmNhM2UtMTFjNS00YTA4LTk3NDUtNmFlNzdmYWQxMzlhIiwiYXV0aF90aW1lIjoiMTc5Nzk5OTQwMCJ9.wk2etixWHVvIBVzQko-UYUS8FX_s0_pl829gJtPDobThR4i0eNgV9U_sUlmekI5w-nfwUbIflu_k8VHXAWTyAw",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-manage",
+        "now": 1798000000
+      },
+      "expect": "malformed"
+    },
+    {
+      "name": "person-token-auth-time-float",
+      "input": {
+        "access_token": "eyJhbGciOiJFZERTQSIsImtpZCI6InN0cy10ZXN0LWEifQ.eyJpc3MiOiJrYWxsYXJhLXN0cyIsImF1ZCI6ImthbGxhcmEtbWFuYWdlIiwic3ViIjoiNTEzYTY1YTctMTc1Ny00YzRlLWJhMzQtMDdkNmU1OTRkNmY4Iiwib3JnIjoiNDI1ZDY0N2QtY2ExNi00YTkzLTg0ZDQtY2I3NzAzZjNiMGQxIiwiaWF0IjoxNzk3OTk5OTAwLCJleHAiOjE3OTgwMDA4MDAsImp0aSI6IjE2NjYzNjFhLTdlNTMtNGVhNi1iOWMxLWYxZGEyZGJlNWYwNSIsImNuZiI6eyJqa3QiOiItb0hQUWtSUWtZSm5TRWJ1TEVod2xpMVQ3M1pybGpnaVNXU19RN0tQd040In0sImthbF9hbXIiOiJwYXNza2V5K3B3ZCIsImthbF9jcmVkIjoiZTUyMmNhM2UtMTFjNS00YTA4LTk3NDUtNmFlNzdmYWQxMzlhIiwiYXV0aF90aW1lIjoxNzk3OTk5NDAwLjV9.LRw61eoXOTYDV77WiUgMssh3MbCn35F32ivVuInbtROZX5jC1rLqXGDDAZkT7WWyQop93R3QwnYqFV7AxywmBw",
+        "jwks": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "x": "0r1SiFQycMXKQ_Fcrt3YqI3YaKwrEFYOaivFSgc8ZXs",
+              "kid": "sts-test-a",
+              "alg": "EdDSA",
+              "use": "sig"
+            }
+          ]
+        },
+        "audience": "kallara-manage",
+        "now": 1798000000
+      },
+      "expect": "malformed"
+    }
+  ],
+  "pkce": [
+    {
+      "name": "rfc7636-appendix-b",
+      "input": {
+        "verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+      },
+      "expect": "ok",
+      "output": {
+        "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+      }
+    },
+    {
+      "name": "length-43",
+      "input": {
+        "verifier": "MgPJW0y7P4FfNghpF1WZiRGj6hEF0J8LcjmV6o3QwHU"
+      },
+      "expect": "ok",
+      "output": {
+        "challenge": "jqWxfqMvgmZuk2w7t4L0BztpTSdadkjbEqY33gyaTdE"
+      }
+    },
+    {
+      "name": "length-128",
+      "input": {
+        "verifier": "wEqMTnzWAKetlOYJOcXs_y_MPY2hTsalwu95kgV6q3eoG7H6NbvJxnL9dVIJJJzb5Z3T-F87kEE2KXbc5oz4Ef-PtqjGXPu-2dClfIGk6ombIgdKuxUneGfm5xDss8Tt"
+      },
+      "expect": "ok",
+      "output": {
+        "challenge": "nXJM6cAc3-Q7Y67V4ZrkcKouQnLoDPINUBR4EGdfNmY"
+      }
+    },
+    {
+      "name": "unreserved-punctuation",
+      "input": {
+        "verifier": "a.b_c~d-a.b_c~d-a.b_c~d-a.b_c~d-a.b_c~d-xyz"
+      },
+      "expect": "ok",
+      "output": {
+        "challenge": "V_79CjRV01ShjvtIDaavCffmiZXXYr1WH9W4WvPCaN8"
+      }
+    },
+    {
+      "name": "length-42",
+      "input": {
+        "verifier": "MgPJW0y7P4FfNghpF1WZiRGj6hEF0J8LcjmV6o3QwH"
+      },
+      "expect": "bad_verifier"
+    },
+    {
+      "name": "length-129",
+      "input": {
+        "verifier": "wEqMTnzWAKetlOYJOcXs_y_MPY2hTsalwu95kgV6q3eoG7H6NbvJxnL9dVIJJJzb5Z3T-F87kEE2KXbc5oz4Ef-PtqjGXPu-2dClfIGk6ombIgdKuxUneGfm5xDss8TtA"
+      },
+      "expect": "bad_verifier"
+    },
+    {
+      "name": "plus-character",
+      "input": {
+        "verifier": "MgPJW0y7P4FfNghpF1WZ+RGj6hEF0J8LcjmV6o3QwHU"
+      },
+      "expect": "bad_verifier"
+    },
+    {
+      "name": "slash-character",
+      "input": {
+        "verifier": "MgPJW0y7P4FfNghpF1WZ/RGj6hEF0J8LcjmV6o3QwHU"
+      },
+      "expect": "bad_verifier"
+    },
+    {
+      "name": "equals-padding",
+      "input": {
+        "verifier": "MgPJW0y7P4FfNghpF1WZiRGj6hEF0J8LcjmV6o3QwH="
+      },
+      "expect": "bad_verifier"
     }
   ]
 }
