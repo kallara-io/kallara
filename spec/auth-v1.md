@@ -50,7 +50,7 @@ The token service publishes:
   | `issuer` | the token service's public base URL |
   | `token_endpoint` | `<base>/oauth/token` |
   | `jwks_uri` | `<base>/.well-known/jwks.json` |
-  | `authorization_endpoint` | `<base>/oauth/authorize` |
+  | `authorization_endpoint` | `<signin>/oauth/authorize`, on the sign-in pages' origin |
   | `revocation_endpoint` | `<base>/oauth/revoke` |
   | `grant_types_supported` | `client_credentials`, `urn:ietf:params:oauth:grant-type:token-exchange`, `authorization_code`, `refresh_token` |
   | `response_types_supported` | `code` |
@@ -64,6 +64,10 @@ The token service publishes:
 
   The metadata `issuer` is a URL as RFC 8414 requires. The `iss` claim of access tokens is the
   fixed string `kallara-sts` (§6).
+
+  `<signin>` is the origin of the sign-in pages, which may differ from the issuer's (`<base>`): the
+  pages' cookies and passkeys belong to that origin. Clients MUST take `authorization_endpoint` from the
+  metadata and never build it from `issuer`.
 
 - `GET /.well-known/jwks.json`: the public keys that sign access tokens, as a JWK Set. Each key has
   `kty=OKP`, `crv=Ed25519`, `x`, `kid`, `alg=EdDSA` and `use=sig`. Retired keys are not listed.
