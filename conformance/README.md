@@ -8,7 +8,7 @@ every SDK. If two implementations disagree about a vector, at least one of them 
 | [`vectors/ciphertext-v1.json`](vectors/ciphertext-v1.json) | [`spec/ciphertext-v1.md`](../spec/ciphertext-v1.md): parsing, context rules, AAD and AES-256-GCM |
 | [`schema/ciphertext-v1.schema.json`](schema/ciphertext-v1.schema.json) | JSON Schema for the file above |
 | [`tools/gen_ciphertext_v1.py`](tools/gen_ciphertext_v1.py) | Deterministic generator, an independent reading of the spec |
-| [`vectors/auth-v1.json`](vectors/auth-v1.json) | [`spec/auth-v1.md`](../spec/auth-v1.md): JWK thumbprints, DPoP proofs and nonces, client assertions, enrollment JWTs, access tokens |
+| [`vectors/auth-v1.json`](vectors/auth-v1.json) | [`spec/auth-v1.md`](../spec/auth-v1.md): JWK thumbprints, DPoP proofs and nonces, client assertions, enrollment JWTs, access tokens (workloads and people), PKCE |
 | [`schema/auth-v1.schema.json`](schema/auth-v1.schema.json) | JSON Schema for the file above |
 | [`tools/gen_auth_v1.py`](tools/gen_auth_v1.py) | Deterministic generator, an independent reading of the spec |
 

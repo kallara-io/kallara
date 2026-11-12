@@ -3,7 +3,7 @@
   "$id": "https://github.com/kallara-io/kallara/conformance/schema/auth-v1.schema.json",
   "title": "Kallara auth v1 conformance vectors",
   "type": "object",
-  "required": ["spec", "thumbprints", "dpop_proofs", "client_assertions", "enrollment_requests", "access_tokens"],
+  "required": ["spec", "thumbprints", "dpop_proofs", "client_assertions", "enrollment_requests", "access_tokens", "pkce"],
   "properties": {
     "$schema": {"type": "string"},
     "spec": {"const": "spec/auth-v1.md"},
@@ -112,17 +112,35 @@
               "properties": {"keys": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/jwk", "required": ["kid"]}}},
               "additionalProperties": false
             },
-            "audience": {"const": "kallara-api"},
+            "audience": {"enum": ["kallara-api", "kallara-manage"]},
             "now": {"$ref": "#/$defs/time"}
           },
           "additionalProperties": false
         },
         "expect": {"enum": ["ok", "bad_signature", "bad_alg", "expired", "iat_out_of_window", "wrong_audience",
-                            "lifetime_too_long"]},
+                            "lifetime_too_long", "malformed"]},
         "output": {
           "type": "object",
           "required": ["claims"],
           "properties": {"claims": {"$ref": "#/$defs/access_claims"}},
+          "additionalProperties": false
+        }
+      }}
+    },
+    "pkce": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case", "properties": {
+        "input": {
+          "type": "object",
+          "required": ["verifier"],
+          "properties": {"verifier": {"type": "string"}},
+          "additionalProperties": false
+        },
+        "expect": {"enum": ["ok", "bad_verifier"]},
+        "output": {
+          "type": "object",
+          "required": ["challenge"],
+          "properties": {"challenge": {"$ref": "#/$defs/b64u256"}},
           "additionalProperties": false
         }
       }}
@@ -167,7 +185,7 @@
       "required": ["iss", "aud", "sub", "org", "iat", "exp", "jti", "cnf", "kal_amr", "kal_cred"],
       "properties": {
         "iss": {"const": "kallara-sts"},
-        "aud": {"const": "kallara-api"},
+        "aud": {"enum": ["kallara-api", "kallara-manage"]},
         "sub": {"type": "string"},
         "org": {"type": "string"},
         "iat": {"$ref": "#/$defs/time"},
@@ -179,8 +197,9 @@
           "properties": {"jkt": {"$ref": "#/$defs/b64u256"}},
           "additionalProperties": false
         },
-        "kal_amr": {"enum": ["host_key", "oidc"]},
-        "kal_cred": {"type": "string"}
+        "kal_amr": {"enum": ["host_key", "oidc", "passkey+pwd"]},
+        "kal_cred": {"type": "string"},
+        "auth_time": {"$ref": "#/$defs/time"}
       },
       "additionalProperties": false
     }
