@@ -497,8 +497,9 @@ refresh_token=<refresh token>
 ```
 
 The proof key MUST be the key the session was started with. Success returns a new access token and a
-new refresh token; the presented refresh token stops working. Presenting a refresh token that was
-already replaced ends the whole session (§11.5). Refreshing never moves `auth_time`.
+new refresh token; the presented refresh token stops working. Presenting the refresh token it most
+recently replaced ends the whole session (§11.5); an older one is refused like any unknown token.
+Refreshing never moves `auth_time`.
 
 Success for both grants: `200`, `Cache-Control: no-store`:
 
@@ -535,8 +536,17 @@ The control plane reads the person's role from its database on every request.
 ### 11.5 Revocation and ending sessions
 
 `POST /oauth/revoke` (RFC 7009), `application/x-www-form-urlencoded` with `token=<refresh token>`
-and a DPoP proof for the endpoint. It ends the session and answers `200` whatever the token was, so
-nothing leaks. Access tokens of an ended session stop working on the next request (§7.1), as do all
+and a DPoP proof (§3) for the endpoint. When the proof's key is the session's key, it ends the session.
+
+| Status | Body | When |
+| --- | --- | --- |
+| `200` | empty, `Cache-Control: no-store` | the proof is valid, whatever the token string was (current, replaced, ended, someone else's or unknown), so nothing leaks |
+| `400` | `{"error":"use_dpop_nonce"}` plus a `DPoP-Nonce` header | the proof has no nonce or a stale one. Retry once with the new nonce. |
+| `400` | `{"error":"invalid_dpop_proof"}` | the proof is missing or invalid (RFC 9449 §7.1) |
+| `429` | `{"error":"slow_down"}` | too many requests from this client address |
+| `503` | `{"error":"temporarily_unavailable"}` | a backend the service needs is down; nothing changed. Retry with backoff. |
+
+Access tokens of an ended session stop working on the next request (§7.1), as do all
 of a person's sessions when they are removed, reset, or have their role changed.
 
 ### 11.6 Step-up
