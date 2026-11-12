@@ -295,7 +295,7 @@ Header: `alg` = `EdDSA`, `kid` = the signing key's ID in the JWKS.
 | `iat`, `exp` | `exp - iat = 900` |
 | `jti` | unique per token |
 | `cnf` | `{"jkt": <thumbprint of the DPoP key>}` |
-| `kal_amr` | `host_key` or `oidc` |
+| `kal_amr` | `host_key` or `oidc`; for people, `passkey+pwd` (§11.4) |
 | `kal_cred` | the ID of the credential used: the host key or the OIDC trust rule |
 
 A verifier accepts a token only if: `alg` is `EdDSA`; `kid` names a key in the current JWKS; the
@@ -424,9 +424,9 @@ tests and audit only; clients only ever see the errors in §4, §5 and §7.
 
 SDKs and the agent run `thumbprints`, and check that the proofs, assertions and enrollment JWTs
 they build pass these rules. The token service runs `dpop_proofs`, `client_assertions` and
-`enrollment_requests`; every resource server runs `dpop_proofs` and `access_tokens`. The token service and every client
-that builds a challenge run `pkce`. Replay and
-revocation need server state and are not in the vectors.
+`enrollment_requests`; every resource server runs `dpop_proofs` and `access_tokens`. The token
+service and every client that builds a challenge run `pkce`. Replay and revocation need server
+state and are not in the vectors.
 
 ES256 signatures in the vectors are deterministic (RFC 6979) only so the file is reproducible.
 Implementations sign ES256 with random nonces and only verify these cases. The keys, codes and
@@ -451,7 +451,7 @@ contract; the endpoints below are.
 | `code_challenge`, `code_challenge_method` | `S256` only (§11.2) |
 | `state` | required, opaque |
 | `dpop_jkt` | required: the thumbprint (§1) of the DPoP key the client will use. It binds the code to that key (RFC 9449 §10). |
-| `max_age` | optional, seconds. `300` forces a new passkey tap (§11.6). |
+| `max_age` | optional, seconds. Servers accept any value and ignore it: every sign-in ends with a passkey tap, so a login started for step-up (§11.6, sent as `300`) already gets a fresh one. |
 
 When the person has signed in, the browser is redirected to `redirect_uri` with `code`, `state` and
 `iss` (RFC 9207). The client MUST check that `state` is the value it sent and that `iss` equals the
@@ -559,7 +559,9 @@ WWW-Authenticate: DPoP error="insufficient_user_authentication", max_age=300
 ```
 
 (RFC 9470). The client runs the authorization flow again with `max_age=300`, which forces a new
-passkey tap, and retries the request with the new token.
+passkey tap, and retries the request with the new token. A step-up login is a new session: it has its
+own session ID and refresh token and its own 12 hours, and the old session continues until it ends.
+A management token with no `auth_time` is treated as stale: it gets the same `401`.
 
 ### 11.7 Client duties
 
